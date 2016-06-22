@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Snake multiplayer</title>
+  </head>
+
+  <body>
+    <canvas id="board" width="600px" height="600px" style="position: absolute; top: 10px; left: 10px;"></canvas>
+
+  </body>
+
+  <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+  <script>
+
+    var board;
+    var socket;
+    var colors = ['#DDD', '#1565C0', '#EF6C00', '#C62828', '#00695C'];
+    var canvas_board = document.getElementById('board');
+    var ctx_board = canvas_board.getContext('2d')
+
+    init();
+
+    function init() {
+      // Init socker.io
+      initSocket();
+
+      // Keystroke handler
+      document.onkeydown = function(e) {
+          e = e || window.event;
+          // TODO: Limit rate
+          if (e.keyCode >= 37 && e.keyCode <= 40)
+            socket.emit('keystroke', e.keyCode - 37);
+      };
+
+    }
+
+    function initSocket() {
+      socket = io('http://localhost:3000');
+
+      socket.on('connect', function() {
+        socket.emit('start', 0);
+      });
+
+      socket.on('status', function(data) {
+        board = data;
+        renderBoard();
+      });
+
+      socket.on('disconnect', function() {
+        alert('Game over');
+      });
+    }
+
+    function renderBoard() {
+      for(var r = 0; r < 50; r++) {
+        for(var c = 0; c < 50; c++) {
+          var playerId = board[r][c];
+          ctx_board.fillStyle = colors[playerId];
+          ctx_board.fillRect(c * 10, r * 10, 9, 9);
+        }
+      }
+    }
+
+  </script>
+
+
+</html>
+
