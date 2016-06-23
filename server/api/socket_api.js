@@ -34,13 +34,21 @@ function startService(port) {
  */
 function onConnection(socket) {
     socket.on('start', function(data) {
-        var roomId = 0;
-        var playerId = snake.startPlayer(roomId);
+        var roomId = data[0];
+        var playerName = data[1];
+        var playerId = snake.startPlayer(roomId, playerName);
+
+        // Assign player information
         socket.roomId = roomId;
         socket.playerId = playerId;
+        socket.playerName = playerName;
 
+        // Add socket to set and map from playerId
         sockets.add(socket);
         player_sockets[playerId] = socket;
+
+        // Notify client
+        socket.emit('started', playerId);
     });
 
     socket.on('keystroke', function(data) {
@@ -66,10 +74,17 @@ function gameEvent(event, data) {
             socket.emit('status', data[socket.roomId]);
         }
     } else if (event == 'player_delete') {
-        var playerId = data;
-        var socket = player_sockets[playerId];
+        var player = data;
+        var socket = player_sockets[player.id];
+
+        // Broadcast to all players in the same room
+        for (var socket of sockets) {
+            if (socket.roomId == player.roomId)
+                socket.emit('message', [player.id, player.name, ' died.']);
+        }
+
+        // Disconnect player socket
         if (typeof socket !== 'undefined')
             socket.disconnect();
     }
 }
-

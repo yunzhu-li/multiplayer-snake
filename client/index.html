@@ -3,23 +3,49 @@
   <head>
     <meta charset="utf-8">
     <title>Snake multiplayer</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
   </head>
 
   <body>
-    <canvas id="board" width="600px" height="600px" style="position: absolute; top: 10px; left: 10px;"></canvas>
-    <span style="position:absolute;top:550px;" id="txt_status"></span>
+    <div class="container-fluid" style="margin-top:50px;max-width:1000px;">
+      <div class="row">
+        <div class="col-md-8">
+          <div class="panel panel-default">
+            <div class="panel-heading"><h3 class="panel-title">Snake</h3></div>
+            <div class="panel-body" style="text-align:center;">
+              <canvas id="board" width="600px" height="600px"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="panel panel-default">
+            <div class="panel-heading"><h3 class="panel-title">Status</h3></div>
+            <div id="panel_player" class="panel-body">You</div>
+            <ul id="ul_messages" class="list-group" style="max-height:600px;">
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12">
+          <span style="" id="txt_status"></span>
+        </div>
+      </div>
+    </div>
   </body>
 
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
   <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
   <script>
 
-    var board;
     var socket;
+    var board;
+    var playerName = 'smallpig';
     var player_colors = ['#2196F3', '#FF5722', '#607D8B', '#E91E63',
                          '#9C27B0', '#795548', '#009688', '#4CAF50'];
 
-    var canvas_board = document.getElementById('board');
-    var ctx_board = canvas_board.getContext('2d')
+    var ctx_board = $('#board')[0].getContext('2d');
 
     init();
 
@@ -41,7 +67,15 @@
       socket = io('http://127.0.0.1:3000');
 
       socket.on('connect', function() {
-        socket.emit('start', 0);
+        socket.emit('start', [0, playerName]);
+      });
+
+      socket.on('started', function(data) {
+        showUserInfo(data, playerName);
+      });
+
+      socket.on('disconnect', function() {
+
       });
 
       socket.on('status', function(data) {
@@ -49,9 +83,10 @@
         renderBoard();
       });
 
-      socket.on('disconnect', function() {
-        document.getElementById('txt_status').innerHTML = 'disconnected';
+      socket.on('message', function(data) {
+        addMessage(data[0], data[1], data[2]);
       });
+
     }
 
     function renderBoard() {
@@ -61,19 +96,31 @@
 
           var fillColor = '#DDD';
           if (playerId > 0) {
-            fillColor = player_colors[playerId % player_colors.length];
+            fillColor = playerColor(playerId);
           } else if (playerId < 0) {
             fillColor = '#424242';
           }
 
           ctx_board.fillStyle = fillColor;
-          ctx_board.fillRect(c * 10, r * 10, 9, 9);
+          ctx_board.fillRect(c * 12, r * 12, 11, 11);
         }
       }
     }
 
+    function playerColor(playerId) {
+      return player_colors[playerId % player_colors.length];
+    }
+
+    function showUserInfo(playerId, playerName) {
+      var text = 'Me: <span style="color:' + playerColor(playerId) + ';"><b>' + playerName + '</b></span> ';
+      $('#panel_player').html(text);
+    }
+
+    function addMessage(playerId, playerName, message) {
+      var text = '<span style="color:' + playerColor(playerId) + ';"><b>' + playerName + '</b></span> ';
+      text += message;
+      $('#ul_messages').append('<li class="list-group-item">' + text + '</li>');
+    }
+
   </script>
-
-
 </html>
-

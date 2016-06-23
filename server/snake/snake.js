@@ -1,6 +1,6 @@
 // Snake game logic
 
-var rooms, gameStatusTimer, gameEventListener;
+var rooms, nextPlayerId, gameStatusTimer, gameEventListener;
 
 // Export functions
 exports.setGameEventListener = function(listener) {
@@ -11,8 +11,8 @@ exports.init = function(numRooms) {
     return init(numRooms);
 };
 
-exports.startPlayer = function(roomId) {
-    return startPlayer(roomId);
+exports.startPlayer = function(roomId, name) {
+    return startPlayer(roomId, name);
 };
 
 exports.keyStroke = function(roomId, playerId, keyCode) {
@@ -31,6 +31,9 @@ function init(numRooms) {
     // Clear rooms
     rooms = [];
 
+    // First player Id
+    nextPlayerId = 1;
+
     // Init each room
     for (var i = 0; i < numRooms; i++) {
         var room = {};
@@ -41,7 +44,6 @@ function init(numRooms) {
 
         // Players
         room.players = {};
-        room.nextPlayerId = 1;
 
         // Add room to instance variable
         rooms.push(room);
@@ -93,20 +95,22 @@ function keyStroke(roomId, playerId, keyCode) {
  * Creates and starts a new player.
  * @param {Number} roomId - room ID.
  */
-function startPlayer(roomId) {
+function startPlayer(roomId, name) {
     var room = rooms[roomId];
-    var playerId = room.nextPlayerId;
+    var playerId = nextPlayerId;
 
     // Create player
     var player = {};
     player.id = playerId;
+    player.roomId = roomId;
+    player.name = name;
     room.players[playerId] = player;
 
     // Spawn snake for player
     spawnSnake(roomId, playerId);
 
     // Increment playerId
-    room.nextPlayerId++;
+    nextPlayerId++;
     return playerId;
 }
 
@@ -117,8 +121,8 @@ function startPlayer(roomId) {
  */
 function deletePlayer(roomId, playerId) {
     var room = rooms[roomId];
-    var player = room.players[playerId];
     var board = room.board;
+    var player = room.players[playerId];
     var tail = player.tail;
 
     // Delete all blocks from tail
@@ -131,7 +135,7 @@ function deletePlayer(roomId, playerId) {
     delete room.players[playerId];
 
     // Send event
-    gameEventListener('player_delete', playerId);
+    gameEventListener('player_delete', player);
 }
 
 /**
