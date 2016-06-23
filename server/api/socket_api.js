@@ -1,21 +1,21 @@
-// API
+// Snake socket API
 
 var snake = require('../snake/snake.js');
 var socket_io = require('socket.io')();
 var sockets, player_sockets, room_sockets;
 
 // Export startService()
-exports.startService = function(port) {
-    startService(port);
+exports.startService = function(port, numRooms, boardSize) {
+    startService(port, numRooms, boardSize);
 };
 
 /**
  * Initializes snake socket API and game instance.
  * @param {string} port - Port to listen on.
  */
-function startService(port) {
+function startService(port, numRooms, boardSize) {
     // Init game
-    snake.init(10);
+    snake.init(numRooms, boardSize);
     sockets = new Set();
     player_sockets = {};
     room_sockets = {};

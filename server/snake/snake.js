@@ -1,14 +1,16 @@
 // Snake game logic
 
-var rooms, nextPlayerId, gameStatusTimer, gameEventListener;
+// Global game data
+var rooms, boardSize, nextPlayerId;
+var gameStatusTimer, gameEventListener;
 
 // Export functions
 exports.setGameEventListener = function(listener) {
     gameEventListener = listener;
 };
 
-exports.init = function(numRooms) {
-    return init(numRooms);
+exports.init = function(numRooms, boardSize) {
+    return init(numRooms, boardSize);
 };
 
 exports.listRooms = function() {
@@ -27,7 +29,7 @@ exports.keyStroke = function(roomId, playerId, keyCode) {
  * Initializes game instance.
  * @param {Number} numRooms - number of rooms.
  */
-function init(numRooms) {
+function init(numRooms, brdSize) {
     // Stop timer if exists
     if (typeof gameStatusTimer !== 'undefined')
         clearInterval(gameStatusTimer);
@@ -37,6 +39,9 @@ function init(numRooms) {
 
     // First player Id
     nextPlayerId = 1;
+
+    // Board size
+    boardSize = brdSize;
 
     // Init each room
     for (var i = 0; i < numRooms; i++) {
@@ -78,10 +83,10 @@ function listRooms() {
  * Allocates an game board fill with zeros.
  */
 function createBoard() {
-    var board = new Array(50);
-    for (var r = 0; r < 50; r++) {
-        board[r] = new Array(50);
-        for (var c = 0; c < 50; c++) {
+    var board = new Array(boardSize);
+    for (var r = 0; r < boardSize; r++) {
+        board[r] = new Array(boardSize);
+        for (var c = 0; c < boardSize; c++) {
             board[r][c] = 0;
         }
     }
@@ -151,7 +156,7 @@ function deletePlayer(roomId, playerId) {
     var tail = player.tail;
 
     // Delete all blocks from tail
-    while (!overflow(tail) && board[tail[0]][tail[1]] == playerId) {
+    while (insideBoard(tail) && board[tail[0]][tail[1]] == playerId) {
         board[tail[0]][tail[1]] = 0;
         tail = nextPosition(tail, room.directions);
     }
@@ -175,8 +180,8 @@ function spawnSnake(roomId, playerId) {
 
     while (true) {
         // Random location within a range
-        var r = Math.floor((Math.random() * 40) + 5);
-        var c = Math.floor((Math.random() * 20) + 5);
+        var r = Math.floor((Math.random() * (boardSize - 20)) + 5);
+        var c = Math.floor((Math.random() * 10) + 5);
 
         // Find space for snake
         var found = true;
@@ -209,8 +214,8 @@ function spawnFood(roomId) {
     var board = rooms[roomId].board;
     var r = -1, c;
     while (r == -1 || board[r][c] !== 0) {
-        r = Math.floor((Math.random() * 50));
-        c = Math.floor((Math.random() * 50));
+        r = Math.floor((Math.random() * boardSize));
+        c = Math.floor((Math.random() * boardSize));
     }
     board[r][c] = -1;
 }
@@ -262,9 +267,9 @@ function updateBoards() {
             var newHead = nextPosition(player.head, room.directions);
             var newTail = nextPosition(player.tail, room.directions);
 
-            // Handle collision, overflow, etc
-            // Overflow
-            if (overflow(newHead)) {
+            // Handle collision, etc
+            // Check if still inside the board
+            if (!insideBoard(newHead)) {
                 deletePlayer(roomId, playerId);
                 continue;
             }
@@ -325,12 +330,12 @@ function nextPosition(position, direction_mtx) {
 }
 
 /**
- * Checks if a position overflows outside the board.
+ * Checks if a position is inside the board.
  * @param {Array} position - current position, [r, c].
  */
-function overflow(position) {
-    if (position[0] < 0 || position[0] >= 50 ||
-        position[1] < 0 || position[1] >= 50) {
+function insideBoard(position) {
+    if (position[0] >= 0 && position[0] < boardSize &&
+        position[1] >= 0 && position[1] < boardSize) {
 
         return true;
     }
