@@ -100,7 +100,7 @@ function removeSocket(socket) {
 
     // Remove from room mapping
     if (!socket.gameStarted) return;
-    var room_socks = room_sockets[socket.roomId]
+    var room_socks = room_sockets[socket.roomId];
     for (var i = 0; i < room_socks.length; i++) {
         if (room_socks[i] === socket)
             room_socks.splice(i, 1);

@@ -21,7 +21,7 @@ exports.startPlayer = function(roomId, name) {
 
 exports.keyStroke = function(roomId, playerId, keyCode) {
     return keyStroke(roomId, playerId, keyCode);
-}
+};
 
 /**
  * Initializes game instance.
@@ -106,7 +106,7 @@ function keyStroke(roomId, playerId, keyCode) {
     if (player.directionLock) return;
 
     // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3)
-    if (Math.abs(directions[player.head[0]][player.head[1]] - keyCode) % 2 == 0) return;
+    if (Math.abs(directions[player.head[0]][player.head[1]] - keyCode) % 2 === 0) return;
 
     // Change head direction
     directions[player.head[0]][player.head[1]] = keyCode;
@@ -181,7 +181,7 @@ function spawnSnake(roomId, playerId) {
         // Find space for snake
         var found = true;
         for (var len = 0; len < 5; len++) {
-            if (board[r][c + len] != 0) {
+            if (board[r][c + len] !== 0) {
                 found = false;
                 break;
             }
@@ -191,7 +191,7 @@ function spawnSnake(roomId, playerId) {
         if (found) {
             player.head = [r, c + 4];
             player.tail = [r, c];
-            for (var len = 0; len < 5; len++) {
+            for (len = 0; len < 5; len++) {
                 board[r][c + len] = playerId;
                 directions[r][c + len] = 2;
             }
@@ -208,7 +208,7 @@ function spawnSnake(roomId, playerId) {
 function spawnFood(roomId) {
     var board = rooms[roomId].board;
     var r = -1, c;
-    while (r == -1 || board[r][c] != 0) {
+    while (r == -1 || board[r][c] !== 0) {
         r = Math.floor((Math.random() * 50));
         c = Math.floor((Math.random() * 50));
     }
@@ -315,12 +315,12 @@ function updateBoards() {
  * @param {Array} direction_mtx - direction matrix.
  */
 function nextPosition(position, direction_mtx) {
-    var r = position[0], c = position[1]
+    var r = position[0], c = position[1];
     var d = direction_mtx[r][c];
     var dr = 0, dc = -1;
-    if (d == 1) { dr = -1; dc = 0 };
-    if (d == 2) { dr =  0; dc = 1 };
-    if (d == 3) { dr =  1; dc = 0 };
+    if (d == 1) { dr = -1; dc = 0; }
+    if (d == 2) { dr =  0; dc = 1; }
+    if (d == 3) { dr =  1; dc = 0; }
     return [r + dr, c + dc];
 }
 
