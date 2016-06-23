@@ -7,7 +7,7 @@
 
   <body>
     <canvas id="board" width="600px" height="600px" style="position: absolute; top: 10px; left: 10px;"></canvas>
-
+    <span style="position:absolute;top:550px;" id="txt_status"></span>
   </body>
 
   <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
@@ -15,7 +15,9 @@
 
     var board;
     var socket;
-    var colors = ['#DDD', '#1565C0', '#EF6C00', '#C62828', '#00695C'];
+    var player_colors = ['#2196F3', '#FF5722', '#607D8B', '#E91E63',
+                         '#9C27B0', '#795548', '#009688', '#4CAF50'];
+
     var canvas_board = document.getElementById('board');
     var ctx_board = canvas_board.getContext('2d')
 
@@ -36,7 +38,7 @@
     }
 
     function initSocket() {
-      socket = io('http://localhost:3000');
+      socket = io('http://127.0.0.1:3000');
 
       socket.on('connect', function() {
         socket.emit('start', 0);
@@ -48,7 +50,7 @@
       });
 
       socket.on('disconnect', function() {
-        alert('Game over');
+        document.getElementById('txt_status').innerHTML = 'disconnected';
       });
     }
 
@@ -56,7 +58,15 @@
       for(var r = 0; r < 50; r++) {
         for(var c = 0; c < 50; c++) {
           var playerId = board[r][c];
-          ctx_board.fillStyle = colors[playerId];
+
+          var fillColor = '#DDD';
+          if (playerId > 0) {
+            fillColor = player_colors[playerId % player_colors.length];
+          } else if (playerId < 0) {
+            fillColor = '#424242';
+          }
+
+          ctx_board.fillStyle = fillColor;
           ctx_board.fillRect(c * 10, r * 10, 9, 9);
         }
       }
