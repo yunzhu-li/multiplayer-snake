@@ -3,22 +3,46 @@
   <head>
     <meta charset="utf-8">
     <title>Snake multiplayer</title>
+    <link href='https://fonts.googleapis.com/css?family=Titillium+Web:400,700,600' rel='stylesheet' type='text/css'>
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
+    <style type="text/css">
+      body               { font-family:"Titillium Web","monospace","Helvetica Neue",Helvetica,Arial; }
+      a                  { cursor:pointer; }
+      #canvas_board      { display:none; }
+      #div_settings      { max-width:320px; margin:auto; }
+      #ul_messages       { max-height:600px; }
+      #btn_restart       { display:inline-block;margin-top:-5px;display:none; }
+      .span-steps        { line-height: 3; }
+      .container-fluid   { margin-top:50px;max-width:1000px; }
+      .panel-title       { display:inline-block; }
+      .status-indicator  { display:inline-block;width:11px;height:11px;border-radius:3px; }
+      .btn-primary       { background-color: #1D98F6;border-color: #218ADB; }
+      .btn-primary:hover,
+      .btn-primary:focus,
+      .btn-primary.focus,
+      .btn-primary:active,
+      .btn-primary.active,
+      .open > .dropdown-toggle.btn-primary { background-color: #218ADB;border-color: #0F7ACC; }
+    </style>
   </head>
 
   <body>
-    <div class="container-fluid" style="margin-top:50px;max-width:1000px;">
+    <div class="container-fluid">
       <div class="row">
         <div class="col-md-8">
           <div class="panel panel-default">
             <div class="panel-heading">
-              <h3 class="panel-title" style="display:inline-block;">Snake</h3>
-              <button id="btn_restart" type="button" class="btn btn-primary btn-sm pull-right" style="display:inline-block;margin-top:-5px;display:none;" onclick="restartGame();">Restart</button>
+              <h3 class="panel-title">Snake</h3>
+              <button id="btn_restart" type="button" class="btn btn-primary btn-sm pull-right" onclick="restartGame();">Restart</button>
             </div>
-            <div class="panel-body" style="text-align:center;">
-              <canvas id="canvas_board" width="600px" height="600px" style="display:none;"></canvas>
-              <div id="div_settings">
-                <!-- <input type="text" class="form-control" placeholder="Name"> -->
+            <div class="panel-body text-center">
+              <canvas id="canvas_board" width="600px" height="600px"></canvas>
+              <div id="div_settings" class="text-left">
+                <br>
+                <span class="span-steps"><b>1. Enter your name (optional)</b></span>
+                <input id="txt_player_name" type="text" class="form-control input-sm" placeholder="Name">
+                <br>
+                <span class="span-steps"><b>2. Join a room!</b></span>
                 <table class="table table-hover">
                   <thead>
                     <tr><td><b>Room</b></td><td><b>Players</b></td><td><b>Action</b></td></tr>
@@ -33,7 +57,7 @@
           <div class="panel panel-default">
             <div class="panel-heading"><h3 class="panel-title">Status</h3></div>
             <div id="panel_status" class="panel-body"></div>
-            <ul id="ul_messages" class="list-group" style="max-height:600px;">
+            <ul id="ul_messages" class="list-group">
             </ul>
           </div>
         </div>
@@ -48,18 +72,19 @@
 
     var socket;
     var board;
-    var playerName = 'smallpig';
+    var playerName = '';
     var roomId, playerId;
     var player_colors = ['#2196F3', '#FF5722', '#607D8B', '#E91E63',
                          '#9C27B0', '#795548', '#009688', '#4CAF50'];
 
-    var btn_restart = $('#btn_restart');
-    var div_settings = $('#div_settings');
-    var tbody_rooms = $('#tbody_rooms');
-    var canvas_board = $('#canvas_board');
-    var ctx_board = $('#canvas_board')[0].getContext('2d');
-    var panel_status = $('#panel_status');
-    var ul_messages = $('#ul_messages');
+    var div_settings    = $('#div_settings');
+    var txt_player_name = $('#txt_player_name');
+    var tbody_rooms     = $('#tbody_rooms');
+    var canvas_board    = $('#canvas_board');
+    var ctx_board       = $('#canvas_board')[0].getContext('2d');
+    var panel_status    = $('#panel_status');
+    var ul_messages     = $('#ul_messages');
+    var btn_restart     = $('#btn_restart');
 
     init();
 
@@ -70,7 +95,6 @@
       // Keystroke handler
       document.onkeydown = function(e) {
           e = e || window.event;
-          // TODO: Limit rate
           if (e.keyCode >= 37 && e.keyCode <= 40)
             socket.emit('keystroke', e.keyCode - 37);
       };
@@ -102,7 +126,7 @@
           var row = '<tr>';
           row += '<td>' + room.id + '</td>';
           row += '<td>' + room.numPlayers + '</td>';
-          row += '<td><a href="#" onclick="startGame(' + room.id + ');">Join</a></td>';
+          row += '<td><a onclick="startGame(' + room.id + ');">Join</a></td>';
           tbody_rooms.append(row);
         }
       });
@@ -137,6 +161,11 @@
     }
 
     function startGame(roomId) {
+      // Get player name
+      playerName = txt_player_name.val();
+      if (playerName.length <= 0) playerName = randomPlayerName();
+
+      // Room ID
       this.roomId = roomId;
       socket.emit('start', [roomId, playerName]);
     }
@@ -168,7 +197,7 @@
     }
 
     function updateStatusPanel(color, message) {
-      var text = '<div style="display:inline-block;width:11px;height:11px;border-radius:3px;background-color:' + color + ';"></div> ' + message;
+      var text = '<div class="status-indicator" style="background-color:' + color + ';"></div> ' + message;
       $('#panel_status').html(text);
     }
 
@@ -176,6 +205,10 @@
       var text = '<span style="color:' + playerColor(playerId) + ';"><b>' + playerName + '</b></span> ';
       text += message;
       $('#ul_messages').append('<li class="list-group-item">' + text + '</li>');
+    }
+
+    function randomPlayerName() {
+      return Math.random().toString(36).substring(2, 9);
     }
 
   </script>
