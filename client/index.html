@@ -11,24 +11,31 @@
       <div class="row">
         <div class="col-md-8">
           <div class="panel panel-default">
-            <div class="panel-heading"><h3 class="panel-title">Snake</h3></div>
+            <div class="panel-heading">
+              <h3 class="panel-title" style="display:inline-block;">Snake</h3>
+              <button id="btn_restart" type="button" class="btn btn-primary btn-sm pull-right" style="display:inline-block;margin-top:-5px;display:none;" onclick="restartGame();">Restart</button>
+            </div>
             <div class="panel-body" style="text-align:center;">
-              <canvas id="board" width="600px" height="600px"></canvas>
+              <canvas id="canvas_board" width="600px" height="600px" style="display:none;"></canvas>
+              <div id="div_settings">
+                <!-- <input type="text" class="form-control" placeholder="Name"> -->
+                <table class="table table-hover">
+                  <thead>
+                    <tr><td><b>Room</b></td><td><b>Players</b></td><td><b>Action</b></td></tr>
+                  </thead>
+                  <tbody id="tbody_rooms"></tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
         <div class="col-md-4">
           <div class="panel panel-default">
             <div class="panel-heading"><h3 class="panel-title">Status</h3></div>
-            <div id="panel_player" class="panel-body">You</div>
+            <div id="panel_status" class="panel-body"></div>
             <ul id="ul_messages" class="list-group" style="max-height:600px;">
             </ul>
           </div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-md-12">
-          <span style="" id="txt_status"></span>
         </div>
       </div>
     </div>
@@ -42,10 +49,17 @@
     var socket;
     var board;
     var playerName = 'smallpig';
+    var roomId, playerId;
     var player_colors = ['#2196F3', '#FF5722', '#607D8B', '#E91E63',
                          '#9C27B0', '#795548', '#009688', '#4CAF50'];
 
-    var ctx_board = $('#board')[0].getContext('2d');
+    var btn_restart = $('#btn_restart');
+    var div_settings = $('#div_settings');
+    var tbody_rooms = $('#tbody_rooms');
+    var canvas_board = $('#canvas_board');
+    var ctx_board = $('#canvas_board')[0].getContext('2d');
+    var panel_status = $('#panel_status');
+    var ul_messages = $('#ul_messages');
 
     init();
 
@@ -60,22 +74,56 @@
           if (e.keyCode >= 37 && e.keyCode <= 40)
             socket.emit('keystroke', e.keyCode - 37);
       };
-
     }
 
     function initSocket() {
       socket = io('http://127.0.0.1:3000');
+      //socket = io('http://52.8.0.66:3000');
+
+      // Update status
+      updateStatusPanel('#FF9800', 'Connecting');
 
       socket.on('connect', function() {
-        socket.emit('start', [0, playerName]);
+        // Update status
+        updateStatusPanel('#00C853', 'Connected');
+
+        // Request room list
+        socket.emit('listRooms');
+      });
+
+      socket.on('room-list', function(data) {
+        // Empty table first
+        tbody_rooms.empty();
+
+        // Process list
+        var list = data;
+        for (var i in list) {
+          var room = list[i];
+          var row = '<tr>';
+          row += '<td>' + room.id + '</td>';
+          row += '<td>' + room.numPlayers + '</td>';
+          row += '<td><a href="#" onclick="startGame(' + room.id + ');">Join</a></td>';
+          tbody_rooms.append(row);
+        }
       });
 
       socket.on('started', function(data) {
-        showUserInfo(data, playerName);
+        div_settings.hide();
+        btn_restart.hide();
+        canvas_board.show();
+        ul_messages.empty();
+        playerId = data;
+        updateStatusPanel(playerColor(playerId), playerName);
+      });
+
+
+      socket.on('ended', function() {
+        updateStatusPanel('#00C853', 'Connected');
+        btn_restart.show();
       });
 
       socket.on('disconnect', function() {
-
+        updateStatusPanel('#F44336', 'Disconnected');
       });
 
       socket.on('status', function(data) {
@@ -86,7 +134,15 @@
       socket.on('message', function(data) {
         addMessage(data[0], data[1], data[2]);
       });
+    }
 
+    function startGame(roomId) {
+      this.roomId = roomId;
+      socket.emit('start', [roomId, playerName]);
+    }
+
+    function restartGame() {
+      startGame(roomId);
     }
 
     function renderBoard() {
@@ -111,9 +167,9 @@
       return player_colors[playerId % player_colors.length];
     }
 
-    function showUserInfo(playerId, playerName) {
-      var text = 'Me: <span style="color:' + playerColor(playerId) + ';"><b>' + playerName + '</b></span> ';
-      $('#panel_player').html(text);
+    function updateStatusPanel(color, message) {
+      var text = '<div style="display:inline-block;width:11px;height:11px;border-radius:3px;background-color:' + color + ';"></div> ' + message;
+      $('#panel_status').html(text);
     }
 
     function addMessage(playerId, playerName, message) {

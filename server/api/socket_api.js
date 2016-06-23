@@ -2,8 +2,7 @@
 
 var snake = require('../snake/snake.js');
 var socket_io = require('socket.io')();
-var sockets;
-var player_sockets;
+var sockets, player_sockets, room_sockets;
 
 // Export startService()
 exports.startService = function(port) {
@@ -16,9 +15,10 @@ exports.startService = function(port) {
  */
 function startService(port) {
     // Init game
-    snake.init(100);
+    snake.init(10);
     sockets = new Set();
     player_sockets = {};
+    room_sockets = {};
 
     // Add status listener
     snake.setGameEventListener(gameEvent);
@@ -33,12 +33,28 @@ function startService(port) {
  * @param {socket} socket - socket instance.
  */
 function onConnection(socket) {
+
+    // Mark socket as not started
+    socket.gameStarted = false;
+
+    // Socket.io events
+    // listRooms (List all rooms)
+    socket.on('listRooms', function() {
+        var list = snake.listRooms();
+        socket.emit('room-list', list);
+    });
+
+    // start - a player joins
     socket.on('start', function(data) {
+        // Cancel if already started
+        if (socket.gameStarted) return;
+
         var roomId = data[0];
         var playerName = data[1];
         var playerId = snake.startPlayer(roomId, playerName);
 
         // Assign player information
+        socket.gameStarted = true;
         socket.roomId = roomId;
         socket.playerId = playerId;
         socket.playerName = playerName;
@@ -47,20 +63,60 @@ function onConnection(socket) {
         sockets.add(socket);
         player_sockets[playerId] = socket;
 
+        // Add map from roomId
+        if (typeof room_sockets[roomId] === 'undefined')
+            room_sockets[roomId] = [];
+        room_sockets[roomId].push(socket);
+
         // Notify client
         socket.emit('started', playerId);
+
+        // Broadcast join message
+        sendRoomMessage(roomId, playerId, playerName, ' joined.');
     });
 
+    // keystroke - player presses a key
     socket.on('keystroke', function(data) {
+        if (!socket.gameStarted) return;
+
         var keyCode = Number(data);
         if (keyCode >= 0 && keyCode <= 4)
             snake.keyStroke(socket.roomId, socket.playerId, keyCode);
     });
 
+    // disconnect - player disconnects
     socket.on('disconnect', function() {
-        delete player_sockets[socket.playerId];
-        sockets.delete(socket);
+        removeSocket(socket);
     });
+}
+
+/**
+ * Removes socket from all tracking data structures.
+ * @param {socket} socket - socket to be removed.
+ */
+function removeSocket(socket) {
+    sockets.delete(socket);
+    delete player_sockets[socket.playerId];
+
+    // Remove from room mapping
+    if (!socket.gameStarted) return;
+    var room_socks = room_sockets[socket.roomId]
+    for (var i = 0; i < room_socks.length; i++) {
+        if (room_socks[i] === socket)
+            room_socks.splice(i, 1);
+    }
+}
+
+/**
+ * Broadcasts message to all players in a room.
+ * @param {Number} roomId - room ID.
+ * @param data - data.
+ */
+function sendRoomMessage(roomId, playerId, playerName, message) {
+    var socks = room_sockets[roomId];
+    for (var s of socks) {
+        s.emit('message', [playerId, playerName, message]);
+    }
 }
 
 /**
@@ -69,22 +125,24 @@ function onConnection(socket) {
  * @param data - event data.
  */
 function gameEvent(event, data) {
+    // Game status update
     if (event == 'update') {
         for (var socket of sockets) {
             socket.emit('status', data[socket.roomId]);
         }
     } else if (event == 'player_delete') {
+        // Player dies
         var player = data;
 
         // Broadcast to all players in the same room
-        for (var socket of sockets) {
-            if (socket.roomId == player.roomId)
-                socket.emit('message', [player.id, player.name, ' died.']);
-        }
+        sendRoomMessage(player.roomId, player.id, player.name, ' died.');
 
         // Disconnect player socket
         var socket = player_sockets[player.id];
-        if (typeof socket !== 'undefined')
-            socket.disconnect();
+        if (typeof socket !== 'undefined') {
+            removeSocket(socket);
+            socket.emit('ended');
+            socket.gameStarted = false;
+        }
     }
 }

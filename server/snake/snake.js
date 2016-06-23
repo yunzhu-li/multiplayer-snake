@@ -11,6 +11,10 @@ exports.init = function(numRooms) {
     return init(numRooms);
 };
 
+exports.listRooms = function() {
+    return listRooms();
+};
+
 exports.startPlayer = function(roomId, name) {
     return startPlayer(roomId, name);
 };
@@ -37,23 +41,37 @@ function init(numRooms) {
     // Init each room
     for (var i = 0; i < numRooms; i++) {
         var room = {};
+        room.id = i;
+        room.players = {};
 
-        // Arrays
+        // Create boards
         room.board = createBoard();
         room.directions = createBoard();
-
-        // Players
-        room.players = {};
 
         // Add room to instance variable
         rooms.push(room);
 
-        // 1 food each room
+        // 2 foods each room
+        spawnFood(i);
         spawnFood(i);
     }
 
     // Start updating status
     gameStatusTimer = setInterval(updateGameStatus, 100);
+}
+
+/**
+ * Lists all rooms.
+ */
+function listRooms() {
+    var list = [];
+    for (var room of rooms) {
+        var room_opt = {};
+        room_opt.id = room.id;
+        room_opt.numPlayers = Object.keys(room.players).length;
+        list.push(room_opt);
+    }
+    return list;
 }
 
 /**
