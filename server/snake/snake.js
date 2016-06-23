@@ -84,11 +84,17 @@ function keyStroke(roomId, playerId, keyCode) {
     // Check if player exists
     if (typeof player === 'undefined') return;
 
+    // Prevent 2 direction changes in 1 frame
+    if (player.directionLock) return;
+
     // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3)
     if (Math.abs(directions[player.head[0]][player.head[1]] - keyCode) % 2 == 0) return;
 
     // Change head direction
     directions[player.head[0]][player.head[1]] = keyCode;
+
+    // Lock direction current frame
+    player.directionLock = true;
 }
 
 /**
@@ -104,6 +110,7 @@ function startPlayer(roomId, name) {
     player.id = playerId;
     player.roomId = roomId;
     player.name = name;
+    player.directionLock = false;
     room.players[playerId] = player;
 
     // Spawn snake for player
@@ -226,6 +233,9 @@ function updateBoards() {
             var player = players[playerId];
             var head = player.head;
             var tail = player.tail;
+
+            // Release direction lock
+            player.directionLock = false;
 
             // Skip updating tail to grow the snake
             var updateTail = true;
