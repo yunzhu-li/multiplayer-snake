@@ -75,7 +75,6 @@ function gameEvent(event, data) {
         }
     } else if (event == 'player_delete') {
         var player = data;
-        var socket = player_sockets[player.id];
 
         // Broadcast to all players in the same room
         for (var socket of sockets) {
@@ -84,6 +83,7 @@ function gameEvent(event, data) {
         }
 
         // Disconnect player socket
+        var socket = player_sockets[player.id];
         if (typeof socket !== 'undefined')
             socket.disconnect();
     }
