@@ -4,5 +4,8 @@
   "description": "A multiplayer snake game.",
   "dependencies": {
     "socket.io": "^1.4.6"
+  },
+  "scripts": {
+    "start": "node ."
   }
 }
