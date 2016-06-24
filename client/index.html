@@ -2,27 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Snake multiplayer</title>
+    <meta name="author" content="Yunzhu Li">
+    <title>Snake Multiplayer</title>
     <link href='https://fonts.googleapis.com/css?family=Titillium+Web:400,700,600' rel='stylesheet' type='text/css'>
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
     <style type="text/css">
-      body               { font-family:"Titillium Web","monospace","Helvetica Neue",Helvetica,Arial; }
-      a                  { cursor:pointer; }
-      #canvas_board      { display:none; }
-      #div_settings      { max-width:320px; margin:auto; }
-      #ul_messages       { max-height:600px; }
-      #btn_restart       { display:inline-block;margin-top:-5px;display:none; }
-      .span-steps        { line-height: 3; }
-      .container-fluid   { margin-top:50px;max-width:1000px; }
-      .panel-title       { display:inline-block; }
-      .status-indicator  { display:inline-block;width:11px;height:11px;border-radius:3px; }
-      .btn-primary       { background-color: #1D98F6;border-color: #218ADB; }
+      body                { font-family:"Titillium Web","monospace","Helvetica Neue",Helvetica,Arial; }
+      a                   { cursor:pointer; }
+      td                  { text-align:center; }
+      .span-steps         { line-height: 3; }
+      .container-fluid    { margin-top:50px;max-width:1000px; }
+      .panel-title        { display:inline-block; }
+      .status-indicator   { display:inline-block;width:11px;height:11px;border-radius:3px; }
+      .btn-primary        { background-color: #1D98F6;border-color: #218ADB; }
       .btn-primary:hover,
-      .btn-primary:focus,
-      .btn-primary.focus,
-      .btn-primary:active,
-      .btn-primary.active,
-      .open > .dropdown-toggle.btn-primary { background-color: #218ADB;border-color: #0F7ACC; }
+      .btn-primary:focus  { background-color: #218ADB;border-color: #0F7ACC; }
+      #canvas_board       { display:none; }
+      #div_settings       { max-width:320px; margin:auto; }
+      #ul_messages        { max-height:600px; }
+      #btn_restart        { display:inline-block;margin-top:-5px;display:none; }
     </style>
   </head>
 
@@ -65,18 +63,12 @@
     </div>
   </body>
 
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+  <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
   <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
   <script>
 
-    var socket;
-    var board;
-    var playerName = '';
-    var roomId, playerId;
-    var player_colors = ['#2196F3', '#FF5722', '#607D8B', '#E91E63',
-                         '#9C27B0', '#795548', '#009688', '#4CAF50'];
-
+    // DOM elements
     var div_settings    = $('#div_settings');
     var txt_player_name = $('#txt_player_name');
     var tbody_rooms     = $('#tbody_rooms');
@@ -86,8 +78,18 @@
     var ul_messages     = $('#ul_messages');
     var btn_restart     = $('#btn_restart');
 
+    // Game data
+    var socket;
+    var board;
+    var roomId, playerId, playerName;
+    var player_colors = ['#2196F3', '#FF5722', '#607D8B', '#E91E63',
+                         '#9C27B0', '#795548', '#009688', '#4CAF50'];
+
     init();
 
+    /**
+     * Initialization
+     */
     function init() {
       // Init socker.io
       initSocket();
@@ -100,6 +102,9 @@
       };
     }
 
+    /**
+     * Initializes socket.io.
+     */
     function initSocket() {
       socket = io('http://127.0.0.1:3000');
       //socket = io('http://52.8.0.66:3000');
@@ -107,6 +112,7 @@
       // Update status
       updateStatusPanel('#FF9800', 'Connecting');
 
+      // Connected
       socket.on('connect', function() {
         // Update status
         updateStatusPanel('#00C853', 'Connected');
@@ -115,6 +121,12 @@
         socket.emit('listRooms');
       });
 
+      // Disconnected
+      socket.on('disconnect', function() {
+        updateStatusPanel('#F44336', 'Disconnected');
+      });
+
+      // Process room list
       socket.on('room-list', function(data) {
         // Empty table first
         tbody_rooms.empty();
@@ -131,6 +143,7 @@
         }
       });
 
+      // Game started
       socket.on('started', function(data) {
         div_settings.hide();
         btn_restart.hide();
@@ -140,26 +153,28 @@
         updateStatusPanel(playerColor(playerId), playerName);
       });
 
-
+      // Game ended
       socket.on('ended', function() {
         updateStatusPanel('#00C853', 'Connected');
         btn_restart.show();
       });
 
-      socket.on('disconnect', function() {
-        updateStatusPanel('#F44336', 'Disconnected');
-      });
-
+      // Game status update
       socket.on('status', function(data) {
         board = data;
         renderBoard();
       });
 
+      // Received message
       socket.on('message', function(data) {
         addMessage(data[0], data[1], data[2]);
       });
     }
 
+    /**
+     * Starts game.
+     * @param {Number} roomId - room ID
+     */
     function startGame(roomId) {
       // Get player name
       playerName = txt_player_name.val();
@@ -170,10 +185,16 @@
       socket.emit('start', [roomId, playerName]);
     }
 
+    /**
+     * Restarts game.
+     */
     function restartGame() {
       startGame(roomId);
     }
 
+    /**
+     * Renders board on canvas.
+     */
     function renderBoard() {
       for(var r = 0; r < 50; r++) {
         for(var c = 0; c < 50; c++) {
@@ -192,24 +213,41 @@
       }
     }
 
+    /**
+     * Gets color for a player ID.
+     * @param {Number} playerId - player ID
+     */
     function playerColor(playerId) {
       return player_colors[playerId % player_colors.length];
     }
 
+    /**
+     * Updates status panel.
+     * @param {string} color - color of the square before message
+     * @param {string} message - message
+     */
     function updateStatusPanel(color, message) {
       var text = '<div class="status-indicator" style="background-color:' + color + ';"></div> ' + message;
       $('#panel_status').html(text);
     }
 
+    /**
+     * Adds a message to the status panel.
+     * @param {Number} playerId - player ID
+     * @param {string} playerName - player name
+     * @param {string} message - message
+     */
     function addMessage(playerId, playerName, message) {
       var text = '<span style="color:' + playerColor(playerId) + ';"><b>' + playerName + '</b></span> ';
       text += message;
       $('#ul_messages').append('<li class="list-group-item">' + text + '</li>');
     }
 
+    /**
+     * Generates random player name.
+     */
     function randomPlayerName() {
       return Math.random().toString(36).substring(2, 9);
     }
-
   </script>
 </html>

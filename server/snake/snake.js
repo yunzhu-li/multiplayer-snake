@@ -1,6 +1,7 @@
 // Snake game logic
 
 // Global game data
+var initialized = false;
 var rooms, boardSize, nextPlayerId;
 var gameStatusTimer, gameEventListener;
 
@@ -27,9 +28,13 @@ exports.keyStroke = function(roomId, playerId, keyCode) {
 
 /**
  * Initializes game instance.
- * @param {Number} numRooms - number of rooms.
+ * @param {Number} numRooms - number of rooms
+ * @param {Number} brdSize - board size
  */
 function init(numRooms, brdSize) {
+    // Check arguments
+    if (numRooms <= 0 || brdSize < 30) return false;
+
     // Stop timer if exists
     if (typeof gameStatusTimer !== 'undefined')
         clearInterval(gameStatusTimer);
@@ -63,12 +68,18 @@ function init(numRooms, brdSize) {
 
     // Start updating status
     gameStatusTimer = setInterval(updateGameStatus, 100);
+
+    // Mark object as initialized
+    initialized = true;
+    return true;
 }
 
 /**
  * Lists all rooms.
  */
 function listRooms() {
+    if (!initialized) return [];
+
     var list = [];
     for (var room of rooms) {
         var room_opt = {};
@@ -95,36 +106,48 @@ function createBoard() {
 
 /**
  * Handles key strokes from players.
- * @param {Number} roomId - room ID.
- * @param {Number} playerId - player ID.
- * @param {Number} keyCode - key code (0: Left, 1: Up, 2: Right, 3: Down).
+ * @param {Number} roomId - room ID
+ * @param {Number} playerId - player ID
+ * @param {Number} keyCode - key code (0: Left, 1: Up, 2: Right, 3: Down)
  */
 function keyStroke(roomId, playerId, keyCode) {
+    if (!initialized) return false;
+    if (roomId >= rooms.length) return false;
+
+    // Check key code
+    keyCode = Number(keyCode);
+    if (keyCode < 0 || keyCode >= 4) return false;
+
     var room = rooms[roomId];
     var directions = room.directions;
     var player = room.players[playerId];
 
     // Check if player exists
-    if (typeof player === 'undefined') return;
+    if (typeof player === 'undefined') return false;
 
     // Prevent 2 direction changes in 1 frame
-    if (player.directionLock) return;
+    if (player.directionLock) return false;
 
     // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3)
-    if (Math.abs(directions[player.head[0]][player.head[1]] - keyCode) % 2 === 0) return;
+    if (Math.abs(directions[player.head[0]][player.head[1]] - keyCode) % 2 === 0) return false;
 
     // Change head direction
     directions[player.head[0]][player.head[1]] = keyCode;
 
-    // Lock direction current frame
+    // Lock direction for current frame
     player.directionLock = true;
+    return true;
 }
 
 /**
  * Creates and starts a new player.
- * @param {Number} roomId - room ID.
+ * @param {Number} roomId - room ID
+ * @param {string} name - player name
  */
 function startPlayer(roomId, name) {
+    if (!initialized) return -1;
+    if (roomId >= rooms.length) return -1;
+
     var room = rooms[roomId];
     var playerId = nextPlayerId;
 
@@ -146,8 +169,8 @@ function startPlayer(roomId, name) {
 
 /**
  * Deletes a player.
- * @param {Number} roomId - room ID.
- * @param {Number} playerId - player ID.
+ * @param {Number} roomId - room ID
+ * @param {Number} playerId - player ID
  */
 function deletePlayer(roomId, playerId) {
     var room = rooms[roomId];
@@ -170,8 +193,8 @@ function deletePlayer(roomId, playerId) {
 
 /**
  * Spawns a snake for a player.
- * @param {Number} roomId - room ID.
- * @param {Number} playerId - player ID.
+ * @param {Number} roomId - room ID
+ * @param {Number} playerId - player ID
  */
 function spawnSnake(roomId, playerId) {
     var board = rooms[roomId].board;
@@ -181,7 +204,7 @@ function spawnSnake(roomId, playerId) {
     while (true) {
         // Random location within a range
         var r = Math.floor((Math.random() * (boardSize - 20)) + 5);
-        var c = Math.floor((Math.random() * 10) + 5);
+        var c = Math.floor((Math.random() * 20) + 5);
 
         // Find space for snake
         var found = true;
@@ -208,7 +231,7 @@ function spawnSnake(roomId, playerId) {
 
 /**
  * Spawns a food at random position on board.
- * @param {Number} roomId - room ID.
+ * @param {Number} roomId - room ID
  */
 function spawnFood(roomId) {
     var board = rooms[roomId].board;
@@ -282,16 +305,16 @@ function updateBoards() {
                 continue;
             } else if (front_object > 0) {
                 // Hit another player
-                theotherPlayer = players[front_object];
-
-                if (theotherPlayer.head[0] == newHead[0] && theotherPlayer.head[1] == newHead[1]) {
+                var theOtherPlayer = players[front_object];
+                if (theOtherPlayer.head[0] == newHead[0] && theOtherPlayer.head[1] == newHead[1]) {
                     // If hits head, both dies.
                     deletePlayer(roomId, playerId);
                     deletePlayer(roomId, front_object);
                     continue;
                 } else {
-                    // Hit on body, the other player dies.
+                    // Hit on body, grow, and the other player dies.
                     deletePlayer(roomId, front_object);
+                    updateTail = false;
                 }
             } else if (front_object == -1) {
                 // Hit food, increase length by 1 and spawn new food.
@@ -316,8 +339,8 @@ function updateBoards() {
 
 /**
  * Finds next position with a given position and direction (same as key code).
- * @param {Array} position - current position, [r, c].
- * @param {Array} direction_mtx - direction matrix.
+ * @param {Array} position - current position, [r, c]
+ * @param {Array} direction_mtx - direction matrix
  */
 function nextPosition(position, direction_mtx) {
     var r = position[0], c = position[1];
@@ -331,7 +354,7 @@ function nextPosition(position, direction_mtx) {
 
 /**
  * Checks if a position is inside the board.
- * @param {Array} position - current position, [r, c].
+ * @param {Array} position - current position, [r, c]
  */
 function insideBoard(position) {
     if (position[0] >= 0 && position[0] < boardSize &&

@@ -11,7 +11,9 @@ exports.startService = function(port, numRooms, boardSize) {
 
 /**
  * Initializes snake socket API and game instance.
- * @param {string} port - Port to listen on.
+ * @param {Number} port - port to listen on
+ * @param {Number} numRooms - number of rooms
+ * @param {Number} boardSize - board size
  */
 function startService(port, numRooms, boardSize) {
     // Init game
@@ -30,7 +32,7 @@ function startService(port, numRooms, boardSize) {
 
 /**
  * Handles new connection event.
- * @param {socket} socket - socket instance.
+ * @param {socket} socket - socket instance
  */
 function onConnection(socket) {
 
@@ -78,10 +80,7 @@ function onConnection(socket) {
     // keystroke - player presses a key
     socket.on('keystroke', function(data) {
         if (!socket.gameStarted) return;
-
-        var keyCode = Number(data);
-        if (keyCode >= 0 && keyCode <= 4)
-            snake.keyStroke(socket.roomId, socket.playerId, keyCode);
+        snake.keyStroke(socket.roomId, socket.playerId, data);
     });
 
     // disconnect - player disconnects
@@ -92,7 +91,7 @@ function onConnection(socket) {
 
 /**
  * Removes socket from all tracking data structures.
- * @param {socket} socket - socket to be removed.
+ * @param {socket} socket - socket to be removed
  */
 function removeSocket(socket) {
     sockets.delete(socket);
@@ -109,8 +108,10 @@ function removeSocket(socket) {
 
 /**
  * Broadcasts message to all players in a room.
- * @param {Number} roomId - room ID.
- * @param data - data.
+ * @param {Number} roomId - room ID
+ * @param {Number} playerId - player ID
+ * @param {string} playerName - player name
+ * @param {string} message - message
  */
 function sendRoomMessage(roomId, playerId, playerName, message) {
     var socks = room_sockets[roomId];
@@ -121,8 +122,8 @@ function sendRoomMessage(roomId, playerId, playerName, message) {
 
 /**
  * Handles game events.
- * @param {string} event - event name.
- * @param data - event data.
+ * @param {string} event - event name
+ * @param data - event data
  */
 function gameEvent(event, data) {
     // Game status update
