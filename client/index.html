@@ -20,18 +20,23 @@
       #canvas_board       { display:none; }
       #div_settings       { max-width:320px; margin:auto; }
       #ul_messages        { max-height:600px; }
-      #btn_restart        { display:inline-block;margin-top:-5px;display:none; }
+      #div_restart        { display:inline-block;margin-top:-3px;display:none; }
+      #btn_restart        { margin-top:-2px; }
     </style>
   </head>
 
   <body>
     <div class="container-fluid">
       <div class="row">
+        <!-- Snake -->
         <div class="col-md-8">
           <div class="panel panel-default">
             <div class="panel-heading">
               <h3 class="panel-title">Snake</h3>
-              <button id="btn_restart" type="button" class="btn btn-primary btn-sm pull-right" onclick="restartGame();">Restart</button>
+              <div id="div_restart" class="pull-right">
+                You died. &nbsp;&nbsp;&nbsp;
+                <button id="btn_restart" type="button" class="btn btn-primary btn-sm" onclick="restartGame();">Restart</button>
+              </div>
             </div>
             <div class="panel-body text-center">
               <canvas id="canvas_board" width="600px" height="600px"></canvas>
@@ -51,6 +56,7 @@
             </div>
           </div>
         </div>
+        <!-- Status -->
         <div class="col-md-4">
           <div class="panel panel-default">
             <div class="panel-heading"><h3 class="panel-title">Status</h3></div>
@@ -76,7 +82,7 @@
     var ctx_board       = $('#canvas_board')[0].getContext('2d');
     var panel_status    = $('#panel_status');
     var ul_messages     = $('#ul_messages');
-    var btn_restart     = $('#btn_restart');
+    var div_restart     = $('#div_restart');
 
     // Game data
     var socket;
@@ -146,7 +152,7 @@
       // Game started
       socket.on('started', function(data) {
         div_settings.hide();
-        btn_restart.hide();
+        div_restart.hide();
         canvas_board.show();
         ul_messages.empty();
         playerId = data;
@@ -156,7 +162,7 @@
       // Game ended
       socket.on('ended', function() {
         updateStatusPanel('#00C853', 'Connected');
-        btn_restart.show();
+        div_restart.show();
       });
 
       // Game status update
