@@ -349,7 +349,7 @@ function nextPosition(position, direction_mtx) {
     if (d == 1) { dr = -1; dc = 0; }
     if (d == 2) { dr =  0; dc = 1; }
     if (d == 3) { dr =  1; dc = 0; }
-    return [r + dr, c + dc];
+    return [(r + dr + boardSize) % boardSize, (c + dc + boardSize) % boardSize];
 }
 
 /**
