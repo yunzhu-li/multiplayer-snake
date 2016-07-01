@@ -10,4 +10,4 @@ config.numRooms = 10;
 // Size of board
 config.boardSize = 50;
 
-exports = config;
+exports.config = config;
