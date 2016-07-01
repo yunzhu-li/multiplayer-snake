@@ -7,7 +7,7 @@
     <link href='https://fonts.googleapis.com/css?family=Titillium+Web:400,700,600' rel='stylesheet' type='text/css'>
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
     <style type="text/css">
-      body                { font-family:"Titillium Web","monospace","Helvetica Neue",Helvetica,Arial; }
+      body                { font-family:"monospace","Titillium Web","Helvetica Neue",Helvetica,Arial; }
       a                   { cursor:pointer; }
       td                  { text-align:center; }
       .span-steps         { line-height: 3; }
@@ -124,7 +124,7 @@
         updateStatusPanel('#00C853', 'Connected');
 
         // Request room list
-        socket.emit('listRooms');
+        socket.emit('list_rooms');
       });
 
       // Disconnected
@@ -133,7 +133,7 @@
       });
 
       // Process room list
-      socket.on('room-list', function(data) {
+      socket.on('room_list', function(data) {
         // Empty table first
         tbody_rooms.empty();
 

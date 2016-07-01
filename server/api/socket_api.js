@@ -45,7 +45,7 @@ class SocketAPI {
 
         // Socket.io events
         // listRooms (List all rooms)
-        socket.on('listRooms', function() {
+        socket.on('list_rooms', function() {
             var list = [];
             for (var roomID in this.rooms) {
                 var sockets = this.rooms[roomID].sockets;
@@ -53,13 +53,16 @@ class SocketAPI {
                            numPlayers: Object.keys(sockets).length});
             }
 
-            socket.emit('room-list', list);
+            socket.emit('room_list', list);
         }.bind(this));
 
         // start - a player joins
         socket.on('start', function(data) {
             // Cancel if already started
             if (socket.gameStarted) return;
+
+            // Remove previous socket reference if exists
+            this._removeSocket(socket);
 
             var roomID = data[0];
             var playerName = data[1];

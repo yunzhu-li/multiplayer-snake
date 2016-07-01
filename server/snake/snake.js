@@ -26,9 +26,8 @@ class Snake {
         this.board = this._createBoard();
         this.directions = this._createBoard();
 
-        // 2 foods
-        this._spawnFood();
-        this._spawnFood();
+        // Foods
+        for (var i = 0; i < 5; i++) this._spawnFood();
 
         // Start updating status
         this.gameStatusTimer = setInterval(this._updateGameStatus.bind(this), 100);
