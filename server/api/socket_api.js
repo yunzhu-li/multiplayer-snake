@@ -1,8 +1,9 @@
 // Snake socket API
 
-var snake = require('../snake/snake.js');
+var Snake = require('../snake/snake.js');
 var socket_io = require('socket.io')();
-var sockets, player_sockets, room_sockets;
+var sockets, player_sockets;
+var rooms;
 
 // Export startService()
 exports.startService = function(port, numRooms, boardSize) {
@@ -16,11 +17,17 @@ exports.startService = function(port, numRooms, boardSize) {
  * @param {Number} boardSize - board size
  */
 function startService(port, numRooms, boardSize) {
-    // Init game
-    snake.init(numRooms, boardSize);
+    // Init rooms
     sockets = new Set();
     player_sockets = {};
-    room_sockets = {};
+
+    for (var roomId = 0; roomId < numRooms; roomId++) {
+        var room = {};
+        room.snake = new Snake(boardSize);
+        room.sockets = new Set();
+
+    }
+
 
     // Add status listener
     snake.setGameEventListener(gameEvent);
