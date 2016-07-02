@@ -137,16 +137,15 @@ class SocketAPI {
      * @param data - event data
      */
     _gameEvent(snake, event, data) {
-        // Game status update
-        if (event == 'update') {
+        // Game state update
+        if (event == 'state') {
             for (var playerID in snake.room.sockets) {
                 var socket = snake.room.sockets[playerID];
-                socket.emit('status', data);
+                socket.emit('state', data);
             }
         } else if (event == 'player_delete') {
             // Player dies
             var playerID = data;
-
             var room = snake.room;
             var socket = room.sockets[playerID];
             if (typeof socket !== 'undefined') {

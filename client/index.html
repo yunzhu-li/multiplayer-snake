@@ -72,6 +72,7 @@
   <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
   <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+  <script src="snake.js"></script>
   <script>
 
     // DOM elements
@@ -87,9 +88,15 @@
     // Game data
     var socket;
     var board;
-    var roomId, playerId, playerName;
-    var player_colors = ['#2196F3', '#FF5722', '#607D8B', '#E91E63',
+    var roomId, playerID, playerName;
+    var playerColors = ['#2196F3', '#FF5722', '#607D8B', '#E91E63',
                          '#9C27B0', '#795548', '#009688', '#4CAF50'];
+
+    var keyMap = {37: 0, 38: 1, 39: 2, 40: 3,
+                  65: 0, 87: 1, 68: 2, 83: 3};
+
+    var snake;
+    var currentFrame;
 
     init();
 
@@ -100,12 +107,28 @@
       // Init socker.io
       initSocket();
 
+      snake = new Snake(50);
+      snake.setGameEventListener(localGameEvent);
+
       // Keystroke handler
       document.onkeydown = function(e) {
           e = e || window.event;
-          if (e.keyCode >= 37 && e.keyCode <= 40)
-            socket.emit('keystroke', e.keyCode - 37);
+
+          var keyCode = keyMap[e.keyCode];
+          if (typeof keyCode === 'undefined') return;
+
+          // Send keystroke to server
+          socket.emit('keystroke', keyCode);
+
+          // Send to local game
+          snake.keyStroke(playerID, keyCode);
       };
+    }
+
+    function localGameEvent(data) {
+      currentFrame = data.frame;
+      board = data.board;
+      renderBoard();
     }
 
     /**
@@ -155,8 +178,8 @@
         div_restart.hide();
         canvas_board.show();
         ul_messages.empty();
-        playerId = data;
-        updateStatusPanel(playerColor(playerId), playerName);
+        playerID = data;
+        updateStatusPanel(playerColor(playerID), playerName);
       });
 
       // Game ended
@@ -165,10 +188,9 @@
         div_restart.show();
       });
 
-      // Game status update
-      socket.on('status', function(data) {
-        board = data;
-        renderBoard();
+      // Game state update
+      socket.on('state', function(data) {
+        snake.setGameState(data.frame, data.players, data.board, data.directions);
       });
 
       // Received message
@@ -204,13 +226,13 @@
     function renderBoard() {
       for(var r = 0; r < 50; r++) {
         for(var c = 0; c < 50; c++) {
-          var playerId = board[r][c];
+          var playerID = board[r][c];
 
           var fillColor = '#DDD';
-          if (playerId > 0) {
-            fillColor = playerColor(playerId);
-          } else if (playerId < 0) {
-            fillColor = '#424242';
+          if (playerID > 0) {
+            fillColor = playerColor(playerID);
+          } else if (playerID < 0) {
+            fillColor = '#555';
           }
 
           ctx_board.fillStyle = fillColor;
@@ -221,10 +243,10 @@
 
     /**
      * Gets color for a player ID.
-     * @param {Number} playerId - player ID
+     * @param {Number} playerID - player ID
      */
-    function playerColor(playerId) {
-      return player_colors[playerId % player_colors.length];
+    function playerColor(playerID) {
+      return playerColors[playerID % playerColors.length];
     }
 
     /**
@@ -239,12 +261,12 @@
 
     /**
      * Adds a message to the status panel.
-     * @param {Number} playerId - player ID
+     * @param {Number} playerID - player ID
      * @param {string} playerName - player name
      * @param {string} message - message
      */
-    function addMessage(playerId, playerName, message) {
-      var text = '<span style="color:' + playerColor(playerId) + ';"><b>' + playerName + '</b></span> ';
+    function addMessage(playerID, playerName, message) {
+      var text = '<span style="color:' + playerColor(playerID) + ';"><b>' + playerName + '</b></span> ';
       text += message;
       $('#ul_messages').append('<li class="list-group-item">' + text + '</li>');
     }

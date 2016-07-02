@@ -7,35 +7,29 @@ class Snake {
      */
     constructor(brdSize) {
         // Check arguments
-        if (brdSize < 30) return false;
-
-        // Stop timer if exists
-        if (typeof this.gameStatusTimer !== 'undefined')
-            clearInterval(this.gameStatusTimer);
+        if (brdSize < 30) throw new Error('Invalid board size');
+        this.boardSize = brdSize;
 
         // Clear players
         this.players = {};
 
-        // First player Id
-        this.nextPlayerId = 1;
-
-        // Board size
-        this.boardSize = brdSize;
+        // First player ID
+        this.nextPlayerID = 1;
 
         // Create boards
         this.board = this._createBoard();
         this.directions = this._createBoard();
 
-        // Foods
+        // Spawn foods
         for (var i = 0; i < 5; i++) this._spawnFood();
 
-        // Start updating status
-        this.gameStatusTimer = setInterval(this._updateGameStatus.bind(this), 100);
+        // Start updating
+        this.currentFrame = 0;
+        this.nextKeyFrame = 0;
+        this._startGameTimer();
 
         // Initialize listener to undefined
         this._gameEventListener = undefined;
-
-        return true;
     }
 
     setGameEventListener(listener) {
@@ -68,6 +62,10 @@ class Snake {
 
         // Lock direction for current frame
         player.directionLock = true;
+
+        // Broadcast next frame
+        this._sendNextFrame();
+
         return true;
     }
 
@@ -77,7 +75,7 @@ class Snake {
     startPlayer() {
         // Create player
         var player = {};
-        player.id = this.nextPlayerId;
+        player.id = this.nextPlayerID;
         player.directionLock = false;
         this.players[player.id] = player;
 
@@ -85,7 +83,11 @@ class Snake {
         this._spawnSnake(player.id);
 
         // Increment playerID
-        this.nextPlayerId++;
+        this.nextPlayerID++;
+
+        // Broadcast state
+        this._sendNextFrame();
+
         return player.id;
     }
 
@@ -120,8 +122,11 @@ class Snake {
         // Delete player object
         delete this.players[playerID];
 
-        // Send event
+        // Broadcast event
         this._gameEventListener(this, 'player_delete', playerID);
+
+        // Broadcast state
+        this._sendNextFrame();
     }
 
     /**
@@ -172,27 +177,55 @@ class Snake {
     }
 
     /**
-     * Updates and sends game status.
+     * Starts game state timer.
      */
-    _updateGameStatus() {
-        this._updateBoards();
-        this._sendGameStatus();
+    _startGameTimer() {
+        this._stopGameTimer();
+        this.gameTimer = setInterval(this._updateGameState.bind(this), 100);
     }
 
     /**
-     * Sends game status to listener.
+     * Stops game state timer.
      */
-    _sendGameStatus() {
+    _stopGameTimer() {
+        if (typeof this.gameTimer !== 'undefined')
+            clearInterval(this.gameTimer);
+    }
+
+    /**
+     * Updates and sends game state.
+     */
+    _updateGameState() {
+        if (this.currentFrame == this.nextKeyFrame) {
+            this._sendGameState();
+            this.nextKeyFrame = this.currentFrame + 10;
+        }
+        this._nextFrame();
+        this.currentFrame++;
+    }
+
+    /**
+     * Sets next frame as key frame.
+     */
+    _sendNextFrame() {
+        this.nextKeyFrame = this.currentFrame + 1;
+    }
+
+    /**
+     * Sends game state to listener.
+     */
+    _sendGameState() {
         if (typeof this._gameEventListener !== 'undefined') {
-            this._gameEventListener(this, 'update', this.board);
+            var payload = {frame: this.currentFrame, players: this.players,
+                           board: this.board, directions: this.directions};
+            this._gameEventListener(this, 'state', payload);
         }
     }
 
     /**
-     * Updates boards with the snake game logic.
+     * Generates the next frame base on the snake game logic.
      */
-    _updateBoards() {
-
+    _nextFrame() {
         // Process each player
         for (var playerID in this.players) {
             var player = this.players[playerID];
@@ -254,7 +287,7 @@ class Snake {
      * @param {Array} position - current position, [r, c]
      * @param {Array} direction_mtx - direction matrix
      */
-    _nextPosition(position) {
+    _nextPosition(position, reverse=false) {
         var r = position[0], c = position[1];
         var d = this.directions[r][c];
         var dr = 0, dc = -1;
