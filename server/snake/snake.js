@@ -10,6 +10,9 @@ class Snake {
         if (brdSize < 30) throw new Error('Invalid board size');
         this.boardSize = brdSize;
 
+        // Other configurations
+        this.rewindAllowance = 5;
+
         // Clear players
         this.players = {};
 
@@ -41,30 +44,40 @@ class Snake {
      * @param {Number} playerID - player ID
      * @param {Number} keyCode - key code (0: Left, 1: Up, 2: Right, 3: Down)
      */
-    keyStroke(playerID, keyCode) {
+    keyStroke(playerID, data) {
+        // Extract data
+        var frame = data.frame;
+        var keyCode = data.keycode;
+        if (typeof frame === 'undefined' ||
+            typeof keyCode === 'undefined') return false;
+
         // Check key code
         keyCode = Number(keyCode);
         if (keyCode < 0 || keyCode >= 4) return false;
 
+        // Find player
         var player = this.players[playerID];
-
-        // Check if player exists
         if (typeof player === 'undefined') return false;
 
-        // Prevent 2 direction changes in 1 frame
-        if (player.directionLock) return false;
+        // Correct server-size state if necessary
+        var frameDifference = Math.max(0, this.currentFrame - frame);
+        if (frameDifference > this.rewindAllowance)
+            return false;
+
+        // Rewind player
+        this._rewindPlayer(player, frameDifference);
 
         // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3)
-        if (Math.abs(this.directions[player.head[0]][player.head[1]] - keyCode) % 2 === 0) return false;
+        if (Math.abs(this.directions[player.head[0]][player.head[1]] - keyCode) % 2 !== 0) {
+            // Change head direction
+            this.directions[player.head[0]][player.head[1]] = keyCode;
+        }
 
-        // Change head direction
-        this.directions[player.head[0]][player.head[1]] = keyCode;
-
-        // Lock direction for current frame
-        player.directionLock = true;
+        // Fast-forward
+        this._fastForwardPlayer(player, frameDifference);
 
         // Broadcast next frame
-        this._sendNextFrame();
+        this._scheduleNextKeyFrame();
 
         return true;
     }
@@ -76,7 +89,6 @@ class Snake {
         // Create player
         var player = {};
         player.id = this.nextPlayerID;
-        player.directionLock = false;
         this.players[player.id] = player;
 
         // Spawn snake for player
@@ -86,7 +98,7 @@ class Snake {
         this.nextPlayerID++;
 
         // Broadcast state
-        this._sendNextFrame();
+        this._scheduleNextKeyFrame();
 
         return player.id;
     }
@@ -126,7 +138,7 @@ class Snake {
         this._gameEventListener(this, 'player_delete', playerID);
 
         // Broadcast state
-        this._sendNextFrame();
+        this._scheduleNextKeyFrame();
     }
 
     /**
@@ -181,7 +193,7 @@ class Snake {
      */
     _startGameTimer() {
         this._stopGameTimer();
-        this.gameTimer = setInterval(this._updateGameState.bind(this), 100);
+        this.gameTimer = setInterval(this._gameTimerEvent.bind(this), 100);
     }
 
     /**
@@ -195,20 +207,21 @@ class Snake {
     /**
      * Updates and sends game state.
      */
-    _updateGameState() {
-        if (this.currentFrame == this.nextKeyFrame) {
-            this._sendGameState();
-            this.nextKeyFrame = this.currentFrame + 10;
-        }
+    _gameTimerEvent() {
         this._nextFrame();
         this.currentFrame++;
+        if (this.currentFrame == this.nextKeyFrame) {
+            this._sendGameState();
+            this._scheduleNextKeyFrame(10);
+        }
     }
 
     /**
-     * Sets next frame as key frame.
+     * Sets the frame after n frame as the next key frame.
+
      */
-    _sendNextFrame() {
-        this.nextKeyFrame = this.currentFrame + 1;
+    _scheduleNextKeyFrame(n = 1) {
+        this.nextKeyFrame = this.currentFrame + n;
     }
 
     /**
@@ -229,63 +242,84 @@ class Snake {
         // Process each player
         for (var playerID in this.players) {
             var player = this.players[playerID];
-            var head = player.head;
-            var tail = player.tail;
-
-            // Release direction lock
-            player.directionLock = false;
-
-            // Skip updating tail to grow the snake
-            var updateTail = true;
-
-            // Generate new head and tail
-            var newHead = this._nextPosition(player.head);
-            var newTail = this._nextPosition(player.tail);
-
-            // Handle collision, etc
-            // Check object in front
-            var front_object = this.board[newHead[0]][newHead[1]];
-            if (front_object == playerID) {
-                // Hit self, dies.
-                this._deletePlayer(playerID);
-                continue;
-            } else if (front_object > 0) {
-                // Hit another player
-                var theOtherPlayer = this.players[front_object];
-                if (theOtherPlayer.head[0] == newHead[0] && theOtherPlayer.head[1] == newHead[1]) {
-                    // If hits head, both dies.
-                    this._deletePlayer(playerID);
-                    this._deletePlayer(front_object);
-                    continue;
-                } else {
-                    // Hit on body, grow, and the other player dies.
-                    this._deletePlayer(front_object);
-                    updateTail = false;
-                }
-            } else if (front_object == -1) {
-                // Hit food, increase length by 1 and spawn new food.
-                updateTail = false;
-                this._spawnFood();
-            }
-
-            // Checks passed, continue moving.
-            // Update head
-            this.board[newHead[0]][newHead[1]] = player.id;
-            this.directions[newHead[0]][newHead[1]] = this.directions[head[0]][head[1]];
-            player.head = newHead;
-
-            // Update tail
-            if (updateTail) {
-                this.board[tail[0]][tail[1]] = 0;
-                player.tail = newTail;
-            }
+            this._progressPlayer(player);
         }
+    }
+
+    _rewindPlayer(player, steps) {
+        while(steps--) {
+            var newHead = this._nextPosition(player.head, true);
+            this.board[player.head[0]][player.head[1]] = 0;
+            player.head = newHead;
+        }
+        return true;
+    }
+
+    _fastForwardPlayer(player, steps) {
+        while(steps--) {
+            if (!this._progressPlayer(player, false))
+                return false;
+        }
+        return true;
+    }
+
+    _progressPlayer(player, moveTail = true) {
+        var head = player.head;
+        var tail = player.tail;
+
+        // Generate new head and tail
+        var newHead = this._nextPosition(player.head);
+        var newTail = this._nextPosition(player.tail);
+
+        // Check object in front
+        var front_object = this.board[newHead[0]][newHead[1]];
+
+        // Schedule next frame as key frame
+        if (front_object !== 0) this._scheduleNextKeyFrame();
+
+        // Handle collision, etc
+        if (front_object == player.id) {
+            // Hit self, dies.
+            this._deletePlayer(player.id);
+            return false;
+        } else if (front_object > 0) {
+            // Hit another player
+            var theOtherPlayer = this.players[front_object];
+            if (theOtherPlayer.head[0] == newHead[0] && theOtherPlayer.head[1] == newHead[1]) {
+                // If hits head, both dies.
+                this._deletePlayer(player.id);
+                this._deletePlayer(front_object);
+                return false;
+            } else {
+                // Hit on body, grow, and the other player dies.
+                this._deletePlayer(front_object);
+                moveTail = false;
+            }
+        } else if (front_object == -1) {
+            // Hit food, increase length by 1 and spawn new food.
+            moveTail = false;
+            this._spawnFood();
+        }
+
+        // Checks passed, continue moving.
+        // Update head
+        this.board[newHead[0]][newHead[1]] = player.id;
+        this.directions[newHead[0]][newHead[1]] = this.directions[head[0]][head[1]];
+        player.head = newHead;
+
+        // Update tail
+        if (moveTail) {
+            this.board[tail[0]][tail[1]] = 0;
+            player.tail = newTail;
+        }
+
+        return true;
     }
 
     /**
      * Finds next position with a given position and direction (same as key code).
      * @param {Array} position - current position, [r, c]
-     * @param {Array} direction_mtx - direction matrix
+     * @param {Boolean} reverse - move in reverse direction
      */
     _nextPosition(position, reverse=false) {
         var r = position[0], c = position[1];
@@ -294,6 +328,7 @@ class Snake {
         if (d == 1) { dr = -1; dc = 0; }
         if (d == 2) { dr =  0; dc = 1; }
         if (d == 3) { dr =  1; dc = 0; }
+        if (reverse) { dr = -dr; dc = -dc; }
         return [(r + dr + this.boardSize) % this.boardSize,
                 (c + dc + this.boardSize) % this.boardSize];
     }

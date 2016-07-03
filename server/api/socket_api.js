@@ -49,8 +49,7 @@ class SocketAPI {
             var list = [];
             for (var roomID in this.rooms) {
                 var sockets = this.rooms[roomID].sockets;
-                list.push({id: roomID,
-                           numPlayers: Object.keys(sockets).length});
+                list.push({id: roomID, num_players: Object.keys(sockets).length});
             }
 
             socket.emit('room_list', list);
@@ -93,9 +92,12 @@ class SocketAPI {
         socket.on('keystroke', function(data) {
             if (!socket.gameStarted) return;
 
+            // Find room (game instance)
             var roomID = socket.roomID;
             var room = this.rooms[roomID];
             if (typeof room === 'undefined') return;
+
+            // Pass data
             room.snake.keyStroke(socket.playerID, data);
         }.bind(this));
 

@@ -63,12 +63,13 @@ Snake.prototype.keyStroke = function(playerID, keyCode) {
 /**
  * Sets game state.
  */
-Snake.prototype.setGameState = function(frame, players, board, directions) {
+Snake.prototype.setGameState = function(frame, offset, players, board, directions) {
     this.stopGameTimer();
     this.currentFrame = frame;
     this.players = players;
     this.board = board;
     this.directions = directions;
+    while (offset--) this.updateGameState();
     this.startGameTimer();
 };
 
@@ -88,18 +89,6 @@ Snake.prototype.deletePlayer = function(playerID) {
 
     // Delete player object
     delete this.players[playerID];
-};
-
-/**
- * Spawns a food at random position on board.
- */
-Snake.prototype.spawnFood = function() {
-    var r = -1, c;
-    while (r == -1 || this.board[r][c] !== 0) {
-        r = Math.floor((Math.random() * this.boardSize));
-        c = Math.floor((Math.random() * this.boardSize));
-    }
-    this.board[r][c] = -1;
 };
 
 /**
@@ -180,7 +169,6 @@ Snake.prototype.nextFrame = function() {
         } else if (front_object == -1) {
             // Hit food, increase length by 1 and spawn new food.
             updateTail = false;
-            this.spawnFood();
         }
 
         // Checks passed, continue moving.
