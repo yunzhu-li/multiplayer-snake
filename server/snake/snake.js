@@ -7,11 +7,11 @@ class Snake {
      */
     constructor(brdSize) {
         // Check arguments
-        if (brdSize < 30) throw new Error('Invalid board size');
+        if (brdSize < 10) throw new Error('Invalid board size');
         this.boardSize = brdSize;
 
         // Other configurations
-        this.rewindAllowance = 5;
+        this.rewindAllowance = 4;
 
         // Clear players
         this.players = {};
@@ -42,7 +42,7 @@ class Snake {
     /**
      * Handles key strokes from players.
      * @param {Number} playerID - player ID
-     * @param {Number} keyCode - key code (0: Left, 1: Up, 2: Right, 3: Down)
+     * @param {Number} data - {frame, key code (0: Left, 1: Up, 2: Right, 3: Down)}
      */
     keyStroke(playerID, data) {
         // Extract data
@@ -59,10 +59,9 @@ class Snake {
         var player = this.players[playerID];
         if (typeof player === 'undefined') return false;
 
-        // Correct server-size state if necessary
+        // Correct server-side state if necessary
         var frameDifference = Math.max(0, this.currentFrame - frame);
-        if (frameDifference > this.rewindAllowance)
-            return false;
+        if (frameDifference > this.rewindAllowance) return false;
 
         // Rewind player
         this._rewindPlayer(player, frameDifference);
@@ -89,13 +88,12 @@ class Snake {
         // Create player
         var player = {};
         player.id = this.nextPlayerID;
+        this.nextPlayerID++;
+
         this.players[player.id] = player;
 
         // Spawn snake for player
-        this._spawnSnake(player.id);
-
-        // Increment playerID
-        this.nextPlayerID++;
+        this._spawnSnake(player);
 
         // Broadcast state
         this._scheduleNextKeyFrame();
@@ -145,13 +143,12 @@ class Snake {
      * Spawns a snake for a player.
      * @param {Number} playerID - player ID
      */
-    _spawnSnake(playerID) {
-        var player = this.players[playerID];
-
+    _spawnSnake(player) {
+        // Find location to spawn
         while (true) {
             // Random location within a range
-            var r = Math.floor((Math.random() * (this.boardSize - 20)) + 5);
-            var c = Math.floor((Math.random() * 20) + 5);
+            var r = Math.floor((Math.random() * (this.boardSize - 10)));
+            var c = Math.floor((Math.random() * this.boardSize));
 
             // Find space for snake
             var found = true;
@@ -167,7 +164,7 @@ class Snake {
                 player.head = [r, c + 4];
                 player.tail = [r, c];
                 for (len = 0; len < 5; len++) {
-                    this.board[r][c + len] = playerID;
+                    this.board[r][c + len] = player.id;
                     this.directions[r][c + len] = 2;
                 }
                 return true;

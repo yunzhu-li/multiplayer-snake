@@ -12,7 +12,7 @@ var div_restart     = $('#div_restart');
 // Game data
 var socket;
 var board;
-var roomId, playerID, playerName;
+var roomID, playerID, playerName;
 var playerColors = ['#2196F3', '#FF5722', '#607D8B', '#E91E63',
                      '#9C27B0', '#795548', '#009688', '#4CAF50'];
 
@@ -21,7 +21,7 @@ var keyStrokeLock = false;
 
 var snake;
 var currentFrame;
-var lastKeyStrokeFrame = 0;
+var activeKeyStrokeFrame = 0;
 
 init();
 
@@ -53,7 +53,7 @@ function init() {
       // Send to local game
       snake.keyStroke(playerID, keyCode);
 
-      lastKeyStrokeFrame = currentFrame;
+      activeKeyStrokeFrame = currentFrame;
   };
 }
 
@@ -123,8 +123,14 @@ function initSocket() {
 
   // Game state update
   socket.on('state', function(data) {
-    if (data.frame < lastKeyStrokeFrame) return;
-    snake.setGameState(data.frame, 1, data.players, data.board, data.directions);
+    var excludePlayerID = 0;
+    if (activeKeyStrokeFrame !== 0) excludePlayerID = playerID;
+    snake.setGameState(data.frame, 1, data.players, data.board, data.directions, excludePlayerID);
+  });
+
+  socket.on('keystroke_ack', function(data) {
+    var ack_frame = Number(data);
+    if (ack_frame >= activeKeyStrokeFrame) activeKeyStrokeFrame = 0;
   });
 
   // Received message
@@ -135,23 +141,26 @@ function initSocket() {
 
 /**
  * Starts game.
- * @param {Number} roomId - room ID
+ * @param {Number} roomID - room ID
  */
-function startGame(roomId) {
+function startGame(roomID) {
   // Get player name
   playerName = txt_player_name.val();
   if (playerName.length <= 0) playerName = randomPlayerName();
 
+  //
+  activeKeyStrokeFrame = 0;
+
   // Room ID
-  this.roomId = roomId;
-  socket.emit('start', [roomId, playerName]);
+  this.roomID = roomID;
+  socket.emit('start', [roomID, playerName]);
 }
 
 /**
  * Restarts game.
  */
 function restartGame() {
-  startGame(roomId);
+  startGame(roomID);
 }
 
 /**

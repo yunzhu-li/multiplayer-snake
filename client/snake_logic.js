@@ -63,14 +63,36 @@ Snake.prototype.keyStroke = function(playerID, keyCode) {
 /**
  * Sets game state.
  */
-Snake.prototype.setGameState = function(frame, offset, players, board, directions) {
+Snake.prototype.setGameState = function(frame, offset, players, board, directions, excludePlayerID) {
     this.stopGameTimer();
     this.currentFrame = frame;
-    this.players = players;
-    this.board = board;
-    this.directions = directions;
+    this.copyGameState(players, board, directions, excludePlayerID);
     while (offset--) this.updateGameState();
     this.startGameTimer();
+};
+
+Snake.prototype.copyGameState = function(players, board, directions, excludePlayerID) {
+    if (excludePlayerID === 0) {
+        this.players = players;
+        this.board = board;
+        this.directions = directions;
+        return;
+    }
+
+    for (var playerID in players) {
+        if (playerID != excludePlayerID) {
+            this.players[playerID] = players[playerID];
+        }
+    }
+
+    for (var r = 0; r < this.boardSize; r++) {
+        for (var c = 0; c < this.boardSize; c++) {
+            if (this.board[r][c] != excludePlayerID && board[r][c] != excludePlayerID) {
+                this.directions[r][c] = directions[r][c];
+                this.board[r][c] = board[r][c];
+            }
+        }
+    }
 };
 
 /**

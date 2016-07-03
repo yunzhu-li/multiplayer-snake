@@ -99,6 +99,9 @@ class SocketAPI {
 
             // Pass data
             room.snake.keyStroke(socket.playerID, data);
+
+            // Send ACK
+            socket.emit('keystroke_ack', data.frame);
         }.bind(this));
 
         // disconnect - player disconnects
