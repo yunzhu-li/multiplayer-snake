@@ -23,7 +23,7 @@ class Snake {
         this.board = this._createBoard();
         this.directions = this._createBoard();
 
-        this.keyStrokeQueue = new Set();
+        this.keyStrokeQueue = [];
 
         // Spawn foods
         for (var i = 0; i < 5; i++) this._spawnFood();
@@ -82,7 +82,7 @@ class Snake {
         if (typeof player === 'undefined') return false;
 
         // Queue keystroke
-        this.keyStrokeQueue.add({frame: frame, playerID: playerID, keyCode: keyCode});
+        this.keyStrokeQueue.push({frame: frame, playerID: playerID, keyCode: keyCode});
         return true;
     }
 
@@ -101,7 +101,8 @@ class Snake {
     }
 
     _processKeyStrokes() {
-        for (var keystroke of this.keyStrokeQueue) {
+        for (var i in this.keyStrokeQueue) {
+            var keystroke = this.keyStrokeQueue[i];
             var frame = keystroke.frame;
             var playerID = keystroke.playerID;
             var keyCode = keystroke.keyCode;
@@ -112,7 +113,7 @@ class Snake {
             if (frameDifference < 0) continue;
 
             // Remove keystroke from queue
-            this.keyStrokeQueue.delete(keystroke);
+            delete this.keyStrokeQueue[i];
 
             // Send ACK
             this._gameEventListener(this, 'keystroke_ack', {playerID: playerID, frame: frame});
