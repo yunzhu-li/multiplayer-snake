@@ -23,6 +23,8 @@ class Snake {
         this.board = this._createBoard();
         this.directions = this._createBoard();
 
+        this.keyStrokeQueue = new Set();
+
         // Spawn foods
         for (var i = 0; i < 5; i++) this._spawnFood();
 
@@ -37,48 +39,6 @@ class Snake {
 
     setGameEventListener(listener) {
         this._gameEventListener = listener;
-    }
-
-    /**
-     * Handles key strokes from players.
-     * @param {Number} playerID - player ID
-     * @param {Number} data - {frame, key code (0: Left, 1: Up, 2: Right, 3: Down)}
-     */
-    keyStroke(playerID, data) {
-        // Extract data
-        var frame = data.frame;
-        var keyCode = data.keycode;
-        if (typeof frame === 'undefined' ||
-            typeof keyCode === 'undefined') return false;
-
-        // Check key code
-        keyCode = Number(keyCode);
-        if (keyCode < 0 || keyCode >= 4) return false;
-
-        // Find player
-        var player = this.players[playerID];
-        if (typeof player === 'undefined') return false;
-
-        // Correct server-side state if necessary
-        var frameDifference = Math.max(0, this.currentFrame - frame);
-        if (frameDifference > this.rewindAllowance) return false;
-
-        // Rewind player
-        this._rewindPlayer(player, frameDifference);
-
-        // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3)
-        if (Math.abs(this.directions[player.head[0]][player.head[1]] - keyCode) % 2 !== 0) {
-            // Change head direction
-            this.directions[player.head[0]][player.head[1]] = keyCode;
-        }
-
-        // Fast-forward
-        this._fastForwardPlayer(player, frameDifference);
-
-        // Broadcast next frame
-        this._scheduleNextKeyFrame();
-
-        return true;
     }
 
     /**
@@ -102,6 +62,31 @@ class Snake {
     }
 
     /**
+     * Handles key strokes from players.
+     * @param {Number} playerID - player ID
+     * @param {Number} data - {frame, key code (0: Left, 1: Up, 2: Right, 3: Down)}
+     */
+    keyStroke(playerID, data) {
+        // Extract data
+        var frame = data.frame;
+        var keyCode = data.keycode;
+        if (typeof frame === 'undefined' ||
+            typeof keyCode === 'undefined') return false;
+
+        // Check key code
+        keyCode = Number(keyCode);
+        if (keyCode < 0 || keyCode >= 4) return false;
+
+        // Find player
+        var player = this.players[playerID];
+        if (typeof player === 'undefined') return false;
+
+        // Queue keystroke
+        this.keyStrokeQueue.add({frame: frame, playerID: playerID, keyCode: keyCode});
+        return true;
+    }
+
+    /**
      * Allocates an game board filled with zeros.
      */
     _createBoard() {
@@ -113,6 +98,44 @@ class Snake {
             }
         }
         return board;
+    }
+
+    _processKeyStrokes() {
+        for (var keystroke of this.keyStrokeQueue) {
+            var frame = keystroke.frame;
+            var playerID = keystroke.playerID;
+            var keyCode = keystroke.keyCode;
+
+            var frameDifference = this.currentFrame - frame;
+
+            // Leave keystroke in the queue if it is for a future frame
+            if (frameDifference < 0) continue;
+
+            // Remove keystroke from queue
+            this.keyStrokeQueue.delete(keystroke);
+
+            // Send ACK
+            this._gameEventListener(this, 'keystroke_ack', {playerID: playerID, frame: frame});
+
+            // Discard if difference exceeds allowance
+            if (frameDifference > this.rewindAllowance) continue;
+
+            // Find player
+            var player = this.players[playerID];
+            if (typeof player === 'undefined') continue;
+
+            // Rewind player, apply keystroke, then fast-forward back to current frame
+            this._rewindPlayer(player, frameDifference);
+
+            // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3)
+            if (Math.abs(this.directions[player.head[0]][player.head[1]] - keyCode) % 2 !== 0) {
+                // Change head direction
+                this.directions[player.head[0]][player.head[1]] = keyCode;
+            }
+
+            this._fastForwardPlayer(player, frameDifference);
+            this._scheduleNextKeyFrame();
+        }
     }
 
     /**
@@ -205,6 +228,7 @@ class Snake {
      * Updates and sends game state.
      */
     _gameTimerEvent() {
+        this._processKeyStrokes();
         this._nextFrame();
         this.currentFrame++;
         if (this.currentFrame == this.nextKeyFrame) {

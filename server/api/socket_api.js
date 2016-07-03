@@ -44,6 +44,10 @@ class SocketAPI {
         socket.gameStarted = false;
 
         // Socket.io events
+        socket.on('_ping', function() {
+            socket.emit('_ping_ack');
+        }.bind(this));
+
         // listRooms (List all rooms)
         socket.on('list_rooms', function() {
             var list = [];
@@ -99,9 +103,6 @@ class SocketAPI {
 
             // Pass data
             room.snake.keyStroke(socket.playerID, data);
-
-            // Send ACK
-            socket.emit('keystroke_ack', data.frame);
         }.bind(this));
 
         // disconnect - player disconnects
@@ -142,17 +143,23 @@ class SocketAPI {
      * @param data - event data
      */
     _gameEvent(snake, event, data) {
-        // Game state update
+        var playerID, room, socket;
+
         if (event == 'state') {
-            for (var playerID in snake.room.sockets) {
-                var socket = snake.room.sockets[playerID];
+            for (playerID in snake.room.sockets) {
+                socket = snake.room.sockets[playerID];
                 socket.emit('state', data);
             }
+        } else if (event == 'keystroke_ack') {
+            playerID = data.playerID;
+            room = snake.room;
+            socket = room.sockets[playerID];
+            socket.emit('keystroke_ack', data.frame);
         } else if (event == 'player_delete') {
             // Player dies
-            var playerID = data;
-            var room = snake.room;
-            var socket = room.sockets[playerID];
+            playerID = data;
+            room = snake.room;
+            socket = room.sockets[playerID];
             if (typeof socket !== 'undefined') {
                 // Broadcast to all players in the same room
                 this._sendRoomMessage(room.id, playerID, room.sockets[playerID].playerName, ' died.');

@@ -21,6 +21,8 @@ function Snake(brdSize) {
 
     // Initialize listener to undefined
     this.gameEventListener = undefined;
+
+    this.startGameTimer();
 }
 
 /**
@@ -63,36 +65,12 @@ Snake.prototype.keyStroke = function(playerID, keyCode) {
 /**
  * Sets game state.
  */
-Snake.prototype.setGameState = function(frame, offset, players, board, directions, excludePlayerID) {
-    this.stopGameTimer();
+Snake.prototype.setGameState = function(frame, offset, players, board, directions) {
     this.currentFrame = frame;
-    this.copyGameState(players, board, directions, excludePlayerID);
-    while (offset--) this.updateGameState();
-    this.startGameTimer();
-};
-
-Snake.prototype.copyGameState = function(players, board, directions, excludePlayerID) {
-    if (excludePlayerID === 0) {
-        this.players = players;
-        this.board = board;
-        this.directions = directions;
-        return;
-    }
-
-    for (var playerID in players) {
-        if (playerID != excludePlayerID) {
-            this.players[playerID] = players[playerID];
-        }
-    }
-
-    for (var r = 0; r < this.boardSize; r++) {
-        for (var c = 0; c < this.boardSize; c++) {
-            if (this.board[r][c] != excludePlayerID && board[r][c] != excludePlayerID) {
-                this.directions[r][c] = directions[r][c];
-                this.board[r][c] = board[r][c];
-            }
-        }
-    }
+    this.players = players;
+    this.board = board;
+    this.directions = directions;
+    while (offset--) this.updateGameState(false);
 };
 
 /**
@@ -118,7 +96,7 @@ Snake.prototype.deletePlayer = function(playerID) {
  */
 Snake.prototype.startGameTimer = function() {
     this.stopGameTimer();
-    this.gameTimer = setInterval(this.updateGameState.bind(this), 100);
+    this.gameTimer = setInterval(this.updateGameState.bind(this), 100, true);
 };
 
 /**
@@ -132,10 +110,11 @@ Snake.prototype.stopGameTimer = function() {
 /**
  * Updates and sends game state.
  */
-Snake.prototype.updateGameState = function() {
+Snake.prototype.updateGameState = function(sendEvent) {
+    if (this.board.length === 0) return;
     this.nextFrame();
     this.currentFrame++;
-    this.sendGameState();
+    if (sendEvent) this.sendGameState();
 };
 
 /**

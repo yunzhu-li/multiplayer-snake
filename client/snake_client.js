@@ -23,6 +23,11 @@ var snake;
 var currentFrame;
 var activeKeyStrokeFrame = 0;
 
+var rtt;
+var pingTimestamp;
+var frameAdvance = 0;
+
+
 init();
 
 /**
@@ -81,11 +86,21 @@ function initSocket() {
 
     // Request room list
     socket.emit('list_rooms');
+
+    setInterval(measureLatency, 3000);
   });
 
   // Disconnected
   socket.on('disconnect', function() {
     updateStatusPanel('#F44336', 'Disconnected');
+  });
+
+  socket.on('_ping_ack', function() {
+    rtt = Date.now() - pingTimestamp;
+    frameAdvance = Math.floor(rtt / 100);
+
+    if (typeof playerID !== 'undefined')
+      updateStatusPanel(playerColor(playerID), playerName + ' (' + rtt + ' ms)');
   });
 
   // Process room list
@@ -117,15 +132,13 @@ function initSocket() {
 
   // Game ended
   socket.on('ended', function() {
-    updateStatusPanel('#00C853', 'Connected');
     div_restart.show();
   });
 
   // Game state update
   socket.on('state', function(data) {
-    var excludePlayerID = 0;
-    if (activeKeyStrokeFrame !== 0) excludePlayerID = playerID;
-    snake.setGameState(data.frame, 1, data.players, data.board, data.directions, excludePlayerID);
+    if (activeKeyStrokeFrame !== 0) return;
+    snake.setGameState(data.frame, frameAdvance, data.players, data.board, data.directions);
   });
 
   socket.on('keystroke_ack', function(data) {
@@ -137,6 +150,11 @@ function initSocket() {
   socket.on('message', function(data) {
     addMessage(data[0], data[1], data[2]);
   });
+}
+
+function measureLatency() {
+  socket.emit('_ping');
+  pingTimestamp = Date.now();
 }
 
 /**
