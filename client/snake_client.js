@@ -19,8 +19,7 @@ var playerColors = ['#2196F3', '#FF5722', '#607D8B', '#E91E63',
 var keyMap = {37: 0, 38: 1, 39: 2, 40: 3, 65: 0, 87: 1, 68: 2, 83: 3};
 
 var snake;
-var currentFrame;
-
+var currentFrame = 0;
 var pendingKeyStrokeFrame = 0;
 
 var rtt;
@@ -48,9 +47,7 @@ function init() {
       var keyCode = keyMap[e.keyCode];
       if (typeof keyCode === 'undefined') return;
 
-      console.log('ks: ' + currentFrame);
-
-      if (!snake.keyStroke(playerID, keyCode)) return;
+      if (!snake.keyStroke(currentFrame, playerID, keyCode)) return;
 
       // Send keystroke to server
       socket.emit('keystroke', {frame: currentFrame, keycode: keyCode});
@@ -69,8 +66,8 @@ function localGameEvent(data) {
  * Initializes socket.io.
  */
 function initSocket() {
-  socket = io('http://127.0.0.1:3000');
-  // socket = io('http://52.8.0.66:3000');
+  // socket = io('http://127.0.0.1:3000');
+  socket = io('http://52.8.0.66:3000');
 
   // Update status
   updateStatusPanel('#FF9800', 'Connecting');

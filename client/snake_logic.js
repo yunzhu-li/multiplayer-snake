@@ -15,6 +15,7 @@ function Snake(brdSize) {
     this.directions = [];
     this.currentFrame = 0;
     this.gameEventListener = undefined;
+    this.keyStrokeQueue = [];
 
     // Start
     this.startGameTimer();
@@ -33,7 +34,7 @@ Snake.prototype.setGameEventListener = function(listener) {
  * @param {Number} playerID - player ID
  * @param {Number} keyCode - key code (0: Left, 1: Up, 2: Right, 3: Down)
  */
-Snake.prototype.keyStroke = function(playerID, keyCode) {
+Snake.prototype.keyStroke = function(frame, playerID, keyCode) {
     // Check key code
     keyCode = Number(keyCode);
     if (keyCode < 0 || keyCode >= 4) return false;
@@ -46,15 +47,47 @@ Snake.prototype.keyStroke = function(playerID, keyCode) {
     // Prevent 2 direction changes in 1 frame
     if (player.directionLock) return false;
 
-    // Ignore reverse-direction and no change (0 <-> 2, 1 <-> 3)
-    if ((this.directions[player.head[0]][player.head[1]] - keyCode) % 2 === 0) return false;
-
     // Change head direction
-    this.directions[player.head[0]][player.head[1]] = keyCode;
+    //this.directions[player.head[0]][player.head[1]] = keyCode;
+
+    // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3)
+    if ((frame == this.currentFrame && (this.directions[player.head[0]][player.head[1]] - keyCode) % 2 === 0)) return false;
 
     // Lock direction for current frame
     player.directionLock = true;
+
+    this.keyStrokeQueue.push({frame: frame, playerID: playerID, keyCode: keyCode});
     return true;
+};
+
+Snake.prototype._processKeyStrokes = function() {
+    for (var i in this.keyStrokeQueue) {
+        var keystroke = this.keyStrokeQueue[i];
+        var frame = keystroke.frame;
+        var playerID = keystroke.playerID;
+        var keyCode = keystroke.keyCode;
+
+        var frameDifference = this.currentFrame - frame;
+
+        // Leave keystroke in the queue if it is for a future frame
+        if (frameDifference < 0) continue;
+
+        // Remove keystroke from queue
+        delete this.keyStrokeQueue[i];
+
+        // Discard if difference exceeds allowance
+        if (frameDifference > 0) continue;
+
+        // Find player
+        var player = this.players[playerID];
+        if (typeof player === 'undefined') continue;
+
+        // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3)
+        if ((this.directions[player.head[0]][player.head[1]] - keyCode) % 2 === 0) return;
+
+        // Change head direction
+        this.directions[player.head[0]][player.head[1]] = keyCode;
+    }
 };
 
 /**
@@ -107,6 +140,7 @@ Snake.prototype.stopGameTimer = function() {
  */
 Snake.prototype.updateGameState = function(sendEvent) {
     if (this.board.length === 0) return;
+    this._processKeyStrokes();
     this.nextFrame();
     this.currentFrame++;
     if (sendEvent) this.sendGameState();
