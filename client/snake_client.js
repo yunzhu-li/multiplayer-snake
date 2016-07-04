@@ -17,11 +17,11 @@ var playerColors = ['#2196F3', '#FF5722', '#607D8B', '#E91E63',
                      '#9C27B0', '#795548', '#009688', '#4CAF50'];
 
 var keyMap = {37: 0, 38: 1, 39: 2, 40: 3, 65: 0, 87: 1, 68: 2, 83: 3};
-var keyStrokeLock = false;
 
 var snake;
 var currentFrame;
-var activeKeyStrokeFrame = 0;
+
+var pendingKeyStrokeFrame = 0;
 
 var rtt;
 var pingTimestamp;
@@ -48,17 +48,14 @@ function init() {
       var keyCode = keyMap[e.keyCode];
       if (typeof keyCode === 'undefined') return;
 
-      // Prevent 2 keystrokes in 1 frame
-      if (keyStrokeLock) return;
-      keyStrokeLock = true;
+      console.log('ks: ' + currentFrame);
+
+      if (!snake.keyStroke(playerID, keyCode)) return;
 
       // Send keystroke to server
       socket.emit('keystroke', {frame: currentFrame, keycode: keyCode});
 
-      // Send to local game
-      snake.keyStroke(playerID, keyCode);
-
-      activeKeyStrokeFrame = currentFrame;
+      pendingKeyStrokeFrame = currentFrame;
   };
 }
 
@@ -66,15 +63,14 @@ function localGameEvent(data) {
   currentFrame = data.frame;
   board = data.board;
   renderBoard();
-  keyStrokeLock = false;
 }
 
 /**
  * Initializes socket.io.
  */
 function initSocket() {
-  //socket = io('http://127.0.0.1:3000');
-  socket = io('http://52.8.0.66:3000');
+  socket = io('http://127.0.0.1:3000');
+  // socket = io('http://52.8.0.66:3000');
 
   // Update status
   updateStatusPanel('#FF9800', 'Connecting');
@@ -137,13 +133,13 @@ function initSocket() {
 
   // Game state update
   socket.on('state', function(data) {
-    if (activeKeyStrokeFrame !== 0) return;
+    if (pendingKeyStrokeFrame !== 0) return;
     snake.setGameState(data.frame, frameAdvance, data.players, data.board, data.directions);
   });
 
   socket.on('keystroke_ack', function(data) {
-    var ack_frame = Number(data);
-    if (ack_frame >= activeKeyStrokeFrame) activeKeyStrokeFrame = 0;
+    if (Number(data) >= pendingKeyStrokeFrame)
+      pendingKeyStrokeFrame = 0;
   });
 
   // Received message

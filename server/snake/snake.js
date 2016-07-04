@@ -129,7 +129,7 @@ class Snake {
             this._rewindPlayer(player, frameDifference);
 
             // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3)
-            if (Math.abs(this.directions[player.head[0]][player.head[1]] - keyCode) % 2 !== 0) {
+            if ((this.directions[player.head[0]][player.head[1]] - keyCode) % 2 !== 0) {
                 // Change head direction
                 this.directions[player.head[0]][player.head[1]] = keyCode;
             }
@@ -332,6 +332,7 @@ class Snake {
         // Update tail
         if (moveTail) {
             this.board[tail[0]][tail[1]] = 0;
+            this.directions[tail[0]][tail[1]] = 0;
             player.tail = newTail;
         }
 

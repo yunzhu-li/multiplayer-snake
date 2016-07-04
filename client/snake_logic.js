@@ -6,22 +6,17 @@
  */
 function Snake(brdSize) {
     // Check arguments
-    if (brdSize < 30) throw new Error('Invalid board size');
+    if (brdSize < 10) throw new Error('Invalid board size');
+
+    // Initialize game data
     this.boardSize = brdSize;
-
-    // Clear players
     this.players = {};
-
-    // Create boards
     this.board = [];
     this.directions = [];
-
-    // Start updating state
     this.currentFrame = 0;
-
-    // Initialize listener to undefined
     this.gameEventListener = undefined;
 
+    // Start
     this.startGameTimer();
 }
 
@@ -51,8 +46,8 @@ Snake.prototype.keyStroke = function(playerID, keyCode) {
     // Prevent 2 direction changes in 1 frame
     if (player.directionLock) return false;
 
-    // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3)
-    if (Math.abs(this.directions[player.head[0]][player.head[1]] - keyCode) % 2 === 0) return false;
+    // Ignore reverse-direction and no change (0 <-> 2, 1 <-> 3)
+    if ((this.directions[player.head[0]][player.head[1]] - keyCode) % 2 === 0) return false;
 
     // Change head direction
     this.directions[player.head[0]][player.head[1]] = keyCode;
@@ -181,6 +176,7 @@ Snake.prototype.nextFrame = function() {
         // Update tail
         if (updateTail) {
             this.board[tail[0]][tail[1]] = 0;
+            this.directions[tail[0]][tail[1]] = 0;
             player.tail = newTail;
         }
     }
