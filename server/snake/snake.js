@@ -169,7 +169,7 @@ class Snake {
      */
     _sendGameState() {
         if (typeof this._gameEventListener !== 'undefined') {
-            var payload = {players: this.players, board: this.board, directions: this.directions};
+            var payload = {players: this.players, board: this.board};
             this._gameEventListener(this, 'state', payload);
         }
     }
