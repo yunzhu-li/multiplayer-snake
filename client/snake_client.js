@@ -24,6 +24,7 @@ function SnakeClient() {
   this.frameAdvance = 0;
   this.pendingKeyStrokeFrame = 0;
   this.gameStarted = false;
+  this.pingCount = 0;
 
   // Init game
   this.snake = new Snake(50);
@@ -59,7 +60,7 @@ function SnakeClient() {
 SnakeClient.prototype.initSocket = function() {
 
   var socket = io('http://127.0.0.1:3000');
-  //var socket = io('http://52.8.0.66:3000');
+  // var socket = io('http://52.8.0.66:3000');
 
   this.socket = socket;
   this.updateStatusPanel('#FF9800', 'Connecting');
@@ -85,7 +86,8 @@ SnakeClient.prototype.initSocket = function() {
   socket.on('_ping_ack', function() {
     // Calculate rtt and frameAdvance
     var rtt = Date.now() - this.pingTimestamp;
-    this.frameAdvance = Math.floor(rtt / 2 / 100);
+    if (this.pingCount % 5 === 0)
+      this.frameAdvance = Math.floor(rtt / 2 / 100);
 
     // Display rtt
     if (this.gameStarted) {
@@ -93,6 +95,9 @@ SnakeClient.prototype.initSocket = function() {
     } else {
       this.updateStatusPanel('#00C853', 'Connected (' + rtt + ' ms)');
     }
+
+    // Count
+    this.pingCount++;
 
     // Measure latency again in 5 seconds
     setTimeout(this.measureLatency.bind(this), 5000);
@@ -108,7 +113,7 @@ SnakeClient.prototype.initSocket = function() {
     for (var i in list) {
       var room = list[i];
       var row = '<tr>';
-      row += '<td>' + room.id + '</td>';
+      row += '<td>' + (Number(room.id) + 1) + '</td>';
       row += '<td>' + room.num_players + '</td>';
       row += '<td><a onclick="client.startGame(' + room.id + ');">Join</a></td>';
       this.tbody_rooms.append(row);
