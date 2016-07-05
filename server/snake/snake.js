@@ -3,23 +3,20 @@
 class Snake {
     /**
      * Initializes game instance.
-     * @param {Number} brdSize - board size
+     * @param {Number} broadSize - board size
      */
-    constructor(brdSize) {
+    constructor(broadSize) {
         // Check arguments
-        if (brdSize < 30) throw new Error('Invalid board size');
-        this.boardSize = brdSize;
+        if (broadSize < 10) throw new Error('Invalid board size');
+        this.boardSize = broadSize;
 
-        // Other configurations
-        this.rewindAllowance = 5;
+        // Maximum number of frames allowed for rewinding
+        this.rewindAllowance = 4;
 
-        // Clear players
+        // Initialize game data
         this.players = {};
-
-        // First player ID
         this.nextPlayerID = 1;
-
-        // Create boards
+        this.keyStrokeQueue = [];
         this.board = this._createBoard();
         this.directions = this._createBoard();
 
@@ -30,9 +27,6 @@ class Snake {
         this.currentFrame = 0;
         this.nextKeyFrame = 0;
         this._startGameTimer();
-
-        // Initialize listener to undefined
-        this._gameEventListener = undefined;
     }
 
     setGameEventListener(listener) {
@@ -40,9 +34,35 @@ class Snake {
     }
 
     /**
+     * Creates and starts a new player.
+     */
+    startPlayer() {
+        // Create and add player
+        var player = {};
+        player.id = this.nextPlayerID;
+        this.nextPlayerID++;
+        this.players[player.id] = player;
+
+        // Spawn snake for player
+        this._spawnSnake(player);
+
+        // Broadcast state
+        this._scheduleNextKeyFrame();
+        return player.id;
+    }
+
+    /**
+     * Ends a player.
+     * @param {Number} playerID - player ID
+     */
+    endPlayer(playerID) {
+        this._deletePlayer(playerID);
+    }
+
+    /**
      * Handles key strokes from players.
      * @param {Number} playerID - player ID
-     * @param {Number} keyCode - key code (0: Left, 1: Up, 2: Right, 3: Down)
+     * @param {Number} data - {frame, key code (0: Left, 1: Up, 2: Right, 3: Down)}
      */
     keyStroke(playerID, data) {
         // Extract data
@@ -59,48 +79,9 @@ class Snake {
         var player = this.players[playerID];
         if (typeof player === 'undefined') return false;
 
-        // Correct server-size state if necessary
-        var frameDifference = Math.max(0, this.currentFrame - frame);
-        if (frameDifference > this.rewindAllowance)
-            return false;
-
-        // Rewind player
-        this._rewindPlayer(player, frameDifference);
-
-        // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3)
-        if (Math.abs(this.directions[player.head[0]][player.head[1]] - keyCode) % 2 !== 0) {
-            // Change head direction
-            this.directions[player.head[0]][player.head[1]] = keyCode;
-        }
-
-        // Fast-forward
-        this._fastForwardPlayer(player, frameDifference);
-
-        // Broadcast next frame
-        this._scheduleNextKeyFrame();
-
+        // Queue keystroke
+        this.keyStrokeQueue.push({frame: frame, playerID: playerID, keyCode: keyCode});
         return true;
-    }
-
-    /**
-     * Creates and starts a new player.
-     */
-    startPlayer() {
-        // Create player
-        var player = {};
-        player.id = this.nextPlayerID;
-        this.players[player.id] = player;
-
-        // Spawn snake for player
-        this._spawnSnake(player.id);
-
-        // Increment playerID
-        this.nextPlayerID++;
-
-        // Broadcast state
-        this._scheduleNextKeyFrame();
-
-        return player.id;
     }
 
     /**
@@ -118,40 +99,15 @@ class Snake {
     }
 
     /**
-     * Deletes a player.
-     * @param {Number} playerID - player ID
-     */
-    _deletePlayer(playerID) {
-        var player = this.players[playerID];
-        var tail = player.tail;
-
-        // Delete all blocks from tail
-        while (this.board[tail[0]][tail[1]] == playerID) {
-            this.board[tail[0]][tail[1]] = 0;
-            tail = this._nextPosition(tail);
-        }
-
-        // Delete player object
-        delete this.players[playerID];
-
-        // Broadcast event
-        this._gameEventListener(this, 'player_delete', playerID);
-
-        // Broadcast state
-        this._scheduleNextKeyFrame();
-    }
-
-    /**
      * Spawns a snake for a player.
-     * @param {Number} playerID - player ID
+     * @param {Number} player - player
      */
-    _spawnSnake(playerID) {
-        var player = this.players[playerID];
-
+    _spawnSnake(player) {
+        // Find location to spawn
         while (true) {
             // Random location within a range
-            var r = Math.floor((Math.random() * (this.boardSize - 20)) + 5);
-            var c = Math.floor((Math.random() * 20) + 5);
+            var r = Math.floor((Math.random() * (this.boardSize - 10)));
+            var c = Math.floor((Math.random() * this.boardSize));
 
             // Find space for snake
             var found = true;
@@ -167,7 +123,7 @@ class Snake {
                 player.head = [r, c + 4];
                 player.tail = [r, c];
                 for (len = 0; len < 5; len++) {
-                    this.board[r][c + len] = playerID;
+                    this.board[r][c + len] = player.id;
                     this.directions[r][c + len] = 2;
                 }
                 return true;
@@ -208,20 +164,13 @@ class Snake {
      * Updates and sends game state.
      */
     _gameTimerEvent() {
+        this._processKeyStrokes();
         this._nextFrame();
         this.currentFrame++;
         if (this.currentFrame == this.nextKeyFrame) {
             this._sendGameState();
             this._scheduleNextKeyFrame(10);
         }
-    }
-
-    /**
-     * Sets the frame after n frame as the next key frame.
-
-     */
-    _scheduleNextKeyFrame(n = 1) {
-        this.nextKeyFrame = this.currentFrame + n;
     }
 
     /**
@@ -236,6 +185,14 @@ class Snake {
     }
 
     /**
+     * Sets the frame after n frame as the next key frame.
+     * @param {Number} n - number of the frame to be scheduled
+     */
+    _scheduleNextKeyFrame(n = 1) {
+        this.nextKeyFrame = this.currentFrame + n;
+    }
+
+    /**
      * Generates the next frame base on the snake game logic.
      */
     _nextFrame() {
@@ -246,23 +203,57 @@ class Snake {
         }
     }
 
-    _rewindPlayer(player, steps) {
-        while(steps--) {
-            var newHead = this._nextPosition(player.head, true);
-            this.board[player.head[0]][player.head[1]] = 0;
-            player.head = newHead;
+    /**
+     * Processes queued keystrokes
+     */
+    _processKeyStrokes() {
+        for (var i in this.keyStrokeQueue) {
+            var keystroke = this.keyStrokeQueue[i];
+            var frame = keystroke.frame;
+            var playerID = keystroke.playerID;
+            var keyCode = keystroke.keyCode;
+
+            var frameDifference = this.currentFrame - frame;
+
+            // Leave keystroke in the queue if it is for a future frame
+            if (frameDifference < 0) continue;
+
+            // Remove keystroke from queue
+            delete this.keyStrokeQueue[i];
+
+            // Send ACK
+            this._gameEventListener(this, 'keystroke_ack', {playerID: playerID, frame: frame});
+
+            // Discard if difference exceeds allowance
+            if (frameDifference > this.rewindAllowance) continue;
+
+            // Find player
+            var player = this.players[playerID];
+            if (typeof player === 'undefined') continue;
+
+            // Rewind player
+            this._rewindPlayer(player, frameDifference);
+
+            // Apply keystroke
+            // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3)
+            if ((this.directions[player.head[0]][player.head[1]] - keyCode) % 2 !== 0) {
+                // Change head direction
+                this.directions[player.head[0]][player.head[1]] = keyCode;
+            }
+
+            // Fast-forward back to current frame
+            this._fastForwardPlayer(player, frameDifference);
+
+            // Schedule update
+            this._scheduleNextKeyFrame();
         }
-        return true;
     }
 
-    _fastForwardPlayer(player, steps) {
-        while(steps--) {
-            if (!this._progressPlayer(player, false))
-                return false;
-        }
-        return true;
-    }
-
+    /**
+     * Progresses player by 1 frame
+     * @param {Object} player - player
+     * @param {Boolean} moveTail - moves tail by default
+     */
     _progressPlayer(player, moveTail = true) {
         var head = player.head;
         var tail = player.tail;
@@ -310,10 +301,63 @@ class Snake {
         // Update tail
         if (moveTail) {
             this.board[tail[0]][tail[1]] = 0;
+            this.directions[tail[0]][tail[1]] = 0;
             player.tail = newTail;
         }
-
         return true;
+    }
+
+    /**
+     * Rewinds player's head position
+     * @param {Object} player - player
+     * @param {Number} steps - number of steps to rewind
+     */
+    _rewindPlayer(player, steps) {
+        while(steps--) {
+            var newHead = this._nextPosition(player.head, true);
+            this.board[player.head[0]][player.head[1]] = 0;
+            player.head = newHead;
+        }
+        return true;
+    }
+
+    /**
+     * Fast-forwards player's head position
+     * @param {Object} player - player
+     * @param {Number} steps - number of steps to rewind
+     */
+    _fastForwardPlayer(player, steps) {
+        while(steps--) {
+            if (!this._progressPlayer(player, false))
+                return false;
+        }
+        return true;
+    }
+
+    /**
+     * Deletes a player.
+     * @param {Number} playerID - player ID
+     */
+    _deletePlayer(playerID) {
+        var player = this.players[playerID];
+        if (typeof player === 'undefined') return;
+
+        var tail = player.tail;
+
+        // Delete all blocks from tail
+        while (this.board[tail[0]][tail[1]] == playerID) {
+            this.board[tail[0]][tail[1]] = 0;
+            tail = this._nextPosition(tail);
+        }
+
+        // Delete player object
+        delete this.players[playerID];
+
+        // Broadcast event
+        this._gameEventListener(this, 'player_delete', playerID);
+
+        // Broadcast state
+        this._scheduleNextKeyFrame();
     }
 
     /**
