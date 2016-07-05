@@ -78,8 +78,9 @@ SnakeClient.prototype.initSocket = function() {
 
   // Disconnected
   socket.on('disconnect', function() {
-    this.updateStatusPanel('#F44336', 'Disconnected');
+    this.gameStarted = false;
     this.snake.setGameState(false);
+    this.updateStatusPanel('#F44336', 'Disconnected');
   }.bind(this));
 
   // Receives ping_ack
@@ -137,6 +138,8 @@ SnakeClient.prototype.initSocket = function() {
 
   // Game ended
   socket.on('ended', function() {
+    this.gameStarted = false;
+    this.snake.deletePlayer(this.playerID);
     this.div_restart.show();
   }.bind(this));
 
