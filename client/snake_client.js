@@ -20,14 +20,7 @@ function SnakeClient() {
                        '#9C27B0', '#795548', '#009688', '#4CAF50'];
   this.keyMap = {37: 0, 38: 1, 39: 2, 40: 3, 65: 0, 87: 1, 68: 2, 83: 3};
 
-  this.currentFrame = 0;
-  this.frameAdvance = 0;
-  this.pendingKeyStrokeFrame = 0;
   this.gameStarted = false;
-
-  // Init game
-  this.snake = new Snake(50);
-  this.snake.setGameEventListener(this.localGameEvent.bind(this));
 
   // Init socket.io
   this.initSocket();
@@ -42,14 +35,8 @@ function SnakeClient() {
       var keyCode = this.keyMap[e.keyCode];
       if (typeof keyCode === 'undefined') return;
 
-      // Send to local game logic
-      if (!this.snake.keyStroke(this.currentFrame, this.playerID, keyCode)) return;
-
       // If accepted, send to server
-      this.socket.emit('keystroke', {frame: this.currentFrame, keycode: keyCode});
-
-      // Wait for keystroke_ack before accepting new updates
-      this.pendingKeyStrokeFrame = this.currentFrame;
+      this.socket.emit('keystroke', {keycode: keyCode});
   }.bind(this);
 }
 
@@ -78,14 +65,12 @@ SnakeClient.prototype.initSocket = function() {
   // Disconnected
   socket.on('disconnect', function() {
     this.updateStatusPanel('#F44336', 'Disconnected');
-    this.snake.setGameState(false);
   }.bind(this));
 
   // Receives ping_ack
   socket.on('_ping_ack', function() {
-    // Calculate rtt and frameAdvance
+    // Calculate rtt
     var rtt = Date.now() - this.pingTimestamp;
-    this.frameAdvance = Math.floor(rtt / 2 / 100);
 
     // Display rtt
     if (this.gameStarted) {
@@ -137,17 +122,7 @@ SnakeClient.prototype.initSocket = function() {
 
   // Game state update
   socket.on('state', function(data) {
-    // Ignore update if pending keystroke exists
-    if (this.pendingKeyStrokeFrame !== 0) return;
-
-    // Update state to local game logic
-    this.snake.setGameState(true, data.frame, this.frameAdvance, data.players, data.board, data.directions);
-  }.bind(this));
-
-  // Keystroke acknowledge
-  socket.on('keystroke_ack', function(data) {
-    if (Number(data) >= this.pendingKeyStrokeFrame)
-      this.pendingKeyStrokeFrame = 0;
+    this.renderBoard(data.board);
   }.bind(this));
 
   // Receives message
@@ -173,9 +148,6 @@ SnakeClient.prototype.startGame = function(roomID) {
   this.playerName = this.txt_player_name.val();
   if (this.playerName.length <= 0) this.playerName = this.randomPlayerName();
 
-  // Accept all updates at start
-  this.pendingKeyStrokeFrame = 0;
-
   // Send room ID
   this.roomID = roomID;
   this.socket.emit('start', [roomID, this.playerName]);
@@ -186,16 +158,6 @@ SnakeClient.prototype.startGame = function(roomID) {
  */
 SnakeClient.prototype.restartGame = function() {
   this.startGame(this.roomID);
-};
-
-/**
- * Handles local game events.
- * @param {Object} data - frame, board
- */
-SnakeClient.prototype.localGameEvent = function(data) {
-  this.currentFrame = data.frame;
-  this.board = data.board;
-  this.renderBoard();
 };
 
 /**
@@ -216,10 +178,10 @@ SnakeClient.prototype.playerColor = function(playerID) {
 /**
  * Renders board on canvas.
  */
-SnakeClient.prototype.renderBoard = function() {
+SnakeClient.prototype.renderBoard = function(board) {
   for(var r = 0; r < 50; r++) {
     for(var c = 0; c < 50; c++) {
-      var playerID = this.board[r][c];
+      var playerID = board[r][c];
 
       var fillColor = '#DDD';
       if (playerID > 0) {

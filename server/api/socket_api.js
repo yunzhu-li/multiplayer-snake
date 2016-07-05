@@ -158,12 +158,6 @@ class SocketAPI {
                 socket = snake.room.sockets[playerID];
                 socket.emit('state', data);
             }
-        } else if (event == 'keystroke_ack') {
-            // Keystroke acknowledge
-            playerID = data.playerID;
-            room = snake.room;
-            socket = room.sockets[playerID];
-            socket.emit('keystroke_ack', data.frame);
         } else if (event == 'player_delete') {
             // Player removal
             playerID = data;
