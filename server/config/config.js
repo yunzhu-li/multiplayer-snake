@@ -5,7 +5,7 @@ var config = {};
 config.port = 3000;
 
 // Number of rooms
-config.numRooms = 10;
+config.numRooms = 5;
 
 // Size of board
 config.boardSize = 50;
