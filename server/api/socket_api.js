@@ -48,14 +48,13 @@ class SocketAPI {
             socket.emit('_ping_ack');
         }.bind(this));
 
-        // listRooms (List all rooms)
+        // list_rooms (List all rooms)
         socket.on('list_rooms', function() {
             var list = [];
             for (var roomID in this.rooms) {
                 var sockets = this.rooms[roomID].sockets;
                 list.push({id: roomID, num_players: Object.keys(sockets).length});
             }
-
             socket.emit('room_list', list);
         }.bind(this));
 
@@ -95,6 +94,7 @@ class SocketAPI {
         // keystroke - player presses a key
         socket.on('keystroke', function(data) {
             if (!socket.gameStarted) return;
+            if (typeof data === 'undefined') return;
 
             // Find room (game instance)
             var roomID = socket.roomID;
@@ -108,6 +108,12 @@ class SocketAPI {
         // disconnect - player disconnects
         socket.on('disconnect', function() {
             this._removeSocket(socket);
+
+            // End player if it's active
+            if (socket.gameStarted) {
+                var room = this.rooms[socket.roomID];
+                room.snake.endPlayer(socket.playerID);
+            }
         }.bind(this));
     }
 
@@ -139,6 +145,7 @@ class SocketAPI {
 
     /**
      * Handles game events.
+     * @param {Snake} snake - snack instance
      * @param {string} event - event name
      * @param data - event data
      */
@@ -146,17 +153,19 @@ class SocketAPI {
         var playerID, room, socket;
 
         if (event == 'state') {
+            // Game state update
             for (playerID in snake.room.sockets) {
                 socket = snake.room.sockets[playerID];
                 socket.emit('state', data);
             }
         } else if (event == 'keystroke_ack') {
+            // Keystroke acknowledge
             playerID = data.playerID;
             room = snake.room;
             socket = room.sockets[playerID];
             socket.emit('keystroke_ack', data.frame);
         } else if (event == 'player_delete') {
-            // Player dies
+            // Player removal
             playerID = data;
             room = snake.room;
             socket = room.sockets[playerID];

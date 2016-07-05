@@ -7,7 +7,7 @@
     <link href='https://fonts.googleapis.com/css?family=Titillium+Web:400,700,600' rel='stylesheet' type='text/css'>
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
     <style type="text/css">
-      body                { font-family:"monospace","Titillium Web","Helvetica Neue",Helvetica,Arial; }
+      body                { font-family:"Titillium Web","monospace","Helvetica Neue",Helvetica,Arial; }
       a                   { cursor:pointer; }
       td                  { text-align:center; }
       .span-steps         { line-height: 3; }
@@ -35,7 +35,7 @@
               <h3 class="panel-title">Snake</h3>
               <div id="div_restart" class="pull-right">
                 You died. &nbsp;&nbsp;&nbsp;
-                <button id="btn_restart" type="button" class="btn btn-primary btn-sm" onclick="restartGame();">Restart</button>
+                <button id="btn_restart" type="button" class="btn btn-primary btn-sm" onclick="client.restartGame();">Restart</button>
               </div>
             </div>
             <div class="panel-body text-center">
@@ -74,4 +74,7 @@
   <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
   <script src="snake_logic.js"></script>
   <script src="snake_client.js"></script>
+  <script>
+    var client = new SnakeClient();
+  </script>
 </html>

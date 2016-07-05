@@ -2,28 +2,28 @@
 
 /**
  * Initializes game instance.
- * @param {Number} brdSize - board size
+ * @param {Number} boardSize - board size
  */
-function Snake(brdSize) {
+function Snake(boardSize) {
     // Check arguments
-    if (brdSize < 10) throw new Error('Invalid board size');
+    if (boardSize < 10) throw new Error('Invalid board size');
 
     // Initialize game data
-    this.boardSize = brdSize;
+    this.boardSize = boardSize;
     this.players = {};
     this.board = [];
     this.directions = [];
-    this.currentFrame = 0;
-    this.gameEventListener = undefined;
     this.keyStrokeQueue = [];
+    this.currentFrame = 0;
+    this.gameStarted = false;
 
     // Start
-    this.startGameTimer();
+    this._startGameTimer();
 }
 
 /**
  * Sets event listener function.
- * @param {Function} keyCode - key code (0: Left, 1: Up, 2: Right, 3: Down)
+ * @param {Function} listener - game event listener
  */
 Snake.prototype.setGameEventListener = function(listener) {
     this.gameEventListener = listener;
@@ -31,35 +31,113 @@ Snake.prototype.setGameEventListener = function(listener) {
 
 /**
  * Handles key strokes from players.
+ * @param {Number} frame - the frame keystroke applies to
  * @param {Number} playerID - player ID
  * @param {Number} keyCode - key code (0: Left, 1: Up, 2: Right, 3: Down)
  */
 Snake.prototype.keyStroke = function(frame, playerID, keyCode) {
-    // Check key code
+    // Get key code and player
     keyCode = Number(keyCode);
     if (keyCode < 0 || keyCode >= 4) return false;
 
     var player = this.players[playerID];
-
-    // Check if player exists
     if (typeof player === 'undefined') return false;
 
     // Prevent 2 direction changes in 1 frame
     if (player.directionLock) return false;
 
-    // Change head direction
-    //this.directions[player.head[0]][player.head[1]] = keyCode;
-
-    // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3)
-    if ((frame == this.currentFrame && (this.directions[player.head[0]][player.head[1]] - keyCode) % 2 === 0)) return false;
+    // Prevent changing to reverse-direction (0 <-> 2, 1 <-> 3), for current frame only
+    if ((frame == this.currentFrame &&
+        (this.directions[player.head[0]][player.head[1]] - keyCode) % 2 === 0)) return false;
 
     // Lock direction for current frame
     player.directionLock = true;
 
+    // Enqueue keystroke
     this.keyStrokeQueue.push({frame: frame, playerID: playerID, keyCode: keyCode});
     return true;
 };
 
+/**
+ * Sets game state.
+ * @param {Number} gameStarted - if the game is started
+ * @param {Number} frame - frame number of the new state
+ * @param {Number} offset - fast-forward game by number of offset frames
+ * @param {Array}  players, board, directions - game data
+ */
+Snake.prototype.setGameState = function(gameStarted, frame, offset, players, board, directions) {
+    this.gameStarted = gameStarted;
+    if (!gameStarted) return;
+
+    this.currentFrame = frame;
+    this.players = players;
+    this.board = board;
+    this.directions = directions;
+
+    // Fast-forward game for an offset number
+    while (offset-- > 0) this._updateGameState(false);
+};
+
+/**
+ * Deletes a player.
+ * @param {Number} playerID - player ID
+ */
+Snake.prototype.deletePlayer = function(playerID) {
+    var player = this.players[playerID];
+    if (typeof player === 'undefined') return;
+
+    var tail = player.tail;
+
+    // Delete all blocks from tail
+    while (this.board[tail[0]][tail[1]] == playerID) {
+        this.board[tail[0]][tail[1]] = 0;
+        tail = this._nextPosition(tail);
+    }
+
+    // Delete player object
+    delete this.players[playerID];
+};
+
+/**
+ * Starts game state timer.
+ */
+Snake.prototype._startGameTimer = function() {
+    this._stopGameTimer();
+    this.gameTimer = setInterval(this._updateGameState.bind(this), 100, true);
+};
+
+/**
+ * Stops game state timer.
+ */
+Snake.prototype._stopGameTimer = function() {
+    if (typeof this.gameTimer !== 'undefined')
+        clearInterval(this.gameTimer);
+};
+
+/**
+ * Updates and sends game state.
+ */
+Snake.prototype._updateGameState = function(sendEvent) {
+    if (!this.gameStarted) return;
+    this._processKeyStrokes();
+    this._nextFrame();
+    this.currentFrame++;
+    if (sendEvent) this._sendGameState();
+};
+
+/**
+ * Sends game state to listener.
+ */
+Snake.prototype._sendGameState = function() {
+    if (typeof this.gameEventListener !== 'undefined') {
+        var payload = {frame: this.currentFrame, board: this.board};
+        this.gameEventListener(payload);
+    }
+};
+
+/**
+ * Processes queued keystrokes
+ */
 Snake.prototype._processKeyStrokes = function() {
     for (var i in this.keyStrokeQueue) {
         var keystroke = this.keyStrokeQueue[i];
@@ -67,16 +145,14 @@ Snake.prototype._processKeyStrokes = function() {
         var playerID = keystroke.playerID;
         var keyCode = keystroke.keyCode;
 
-        var frameDifference = this.currentFrame - frame;
-
         // Leave keystroke in the queue if it is for a future frame
-        if (frameDifference < 0) continue;
+        if (frame > this.currentFrame) continue;
 
         // Remove keystroke from queue
         delete this.keyStrokeQueue[i];
 
-        // Discard if difference exceeds allowance
-        if (frameDifference > 0) continue;
+        // Discard if its for a past frame
+        if (frame < this.currentFrame) continue;
 
         // Find player
         var player = this.players[playerID];
@@ -91,75 +167,9 @@ Snake.prototype._processKeyStrokes = function() {
 };
 
 /**
- * Sets game state.
- */
-Snake.prototype.setGameState = function(frame, offset, players, board, directions) {
-    this.currentFrame = frame;
-    this.players = players;
-    this.board = board;
-    this.directions = directions;
-    while (offset--) this.updateGameState(false);
-};
-
-/**
- * Deletes a player.
- * @param {Number} playerID - player ID
- */
-Snake.prototype.deletePlayer = function(playerID) {
-    var player = this.players[playerID];
-    var tail = player.tail;
-
-    // Delete all blocks from tail
-    while (this.board[tail[0]][tail[1]] == playerID) {
-        this.board[tail[0]][tail[1]] = 0;
-        tail = this.nextPosition(tail);
-    }
-
-    // Delete player object
-    delete this.players[playerID];
-};
-
-/**
- * Starts game state timer.
- */
-Snake.prototype.startGameTimer = function() {
-    this.stopGameTimer();
-    this.gameTimer = setInterval(this.updateGameState.bind(this), 100, true);
-};
-
-/**
- * Stops game state timer.
- */
-Snake.prototype.stopGameTimer = function() {
-    if (typeof this.gameTimer !== 'undefined')
-        clearInterval(this.gameTimer);
-};
-
-/**
- * Updates and sends game state.
- */
-Snake.prototype.updateGameState = function(sendEvent) {
-    if (this.board.length === 0) return;
-    this._processKeyStrokes();
-    this.nextFrame();
-    this.currentFrame++;
-    if (sendEvent) this.sendGameState();
-};
-
-/**
- * Sends game state to listener.
- */
-Snake.prototype.sendGameState = function() {
-    if (typeof this.gameEventListener !== 'undefined') {
-        var payload = {frame: this.currentFrame, board: this.board};
-        this.gameEventListener(payload);
-    }
-};
-
-/**
  * Generates the next frame base on the snake game logic.
  */
-Snake.prototype.nextFrame = function() {
+Snake.prototype._nextFrame = function() {
     // Process each player
     for (var playerID in this.players) {
         var player = this.players[playerID];
@@ -173,8 +183,8 @@ Snake.prototype.nextFrame = function() {
         var updateTail = true;
 
         // Generate new head and tail
-        var newHead = this.nextPosition(player.head);
-        var newTail = this.nextPosition(player.tail);
+        var newHead = this._nextPosition(player.head);
+        var newTail = this._nextPosition(player.tail);
 
         // Handle collision, etc
         // Check object in front
@@ -219,9 +229,8 @@ Snake.prototype.nextFrame = function() {
 /**
  * Finds next position with a given position and direction (same as key code).
  * @param {Array} position - current position, [r, c]
- * @param {Array} direction_mtx - direction matrix
  */
-Snake.prototype.nextPosition = function(position) {
+Snake.prototype._nextPosition = function(position) {
     var r = position[0], c = position[1];
     var d = this.directions[r][c];
     var dr = 0, dc = -1;
