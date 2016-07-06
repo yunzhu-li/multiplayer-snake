@@ -46,7 +46,7 @@ function SnakeClient() {
 SnakeClient.prototype.initSocket = function() {
 
   var socket = io('http://127.0.0.1:3000', {reconnectionAttempts: 3});
-  // var socket = io('http://52.8.0.66:3000', {reconnectionAttempts: 3});
+  // var socket = io('http://52.52.19.25:3000', {reconnectionAttempts: 3});
 
   this.socket = socket;
   this.updateStatusPanel('#FF9800', 'Connecting');
@@ -84,8 +84,8 @@ SnakeClient.prototype.initSocket = function() {
       this.updateStatusPanel('#00C853', 'Connected (' + rtt + ' ms)');
     }
 
-    // Measure latency again in 5 seconds
-    setTimeout(this.measureLatency.bind(this), 5000);
+    // Measure latency again in 2 seconds
+    setTimeout(this.measureLatency.bind(this), 2000);
   }.bind(this));
 
   // Receives room list
