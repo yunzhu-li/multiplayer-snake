@@ -7,6 +7,7 @@ class Snake {
      */
     constructor(broadSize) {
         // Check arguments
+        broadSize = Number(broadSize);
         if (broadSize < 10) throw new Error('Invalid board size');
         this.boardSize = broadSize;
 
@@ -25,6 +26,7 @@ class Snake {
 
     setGameEventListener(listener) {
         this._gameEventListener = listener;
+        return true;
     }
 
     /**
@@ -47,7 +49,7 @@ class Snake {
      * @param {Number} playerID - player ID
      */
     endPlayer(playerID) {
-        this._deletePlayer(playerID);
+        return this._deletePlayer(playerID);
     }
 
     /**
@@ -57,8 +59,11 @@ class Snake {
      */
     keyStroke(playerID, data) {
         // Check data
+        if (typeof data === 'undefined' ||
+            typeof data.keycode === 'undefined') return false;
+
         var keyCode = data.keycode;
-        if (typeof keyCode === 'undefined') return false;
+
         keyCode = Number(keyCode);
         if (keyCode < 0 || keyCode >= 4) return false;
 
@@ -138,6 +143,7 @@ class Snake {
             c = Math.floor((Math.random() * this.boardSize));
         }
         this.board[r][c] = -1;
+        return true;
     }
 
     /**
@@ -146,6 +152,7 @@ class Snake {
     _startGameTimer() {
         this._stopGameTimer();
         this.gameTimer = setInterval(this._gameTimerEvent.bind(this), 100);
+        return true;
     }
 
     /**
@@ -154,6 +161,7 @@ class Snake {
     _stopGameTimer() {
         if (typeof this.gameTimer !== 'undefined')
             clearInterval(this.gameTimer);
+        return true;
     }
 
     /**
@@ -171,7 +179,9 @@ class Snake {
         if (typeof this._gameEventListener !== 'undefined') {
             var payload = {players: this.players, board: this.board};
             this._gameEventListener(this, 'state', payload);
+            return true;
         }
+        return false;
     }
 
     /**
@@ -183,6 +193,7 @@ class Snake {
             var player = this.players[playerID];
             this._progressPlayer(player);
         }
+        return true;
     }
 
     /**
@@ -249,7 +260,7 @@ class Snake {
      */
     _deletePlayer(playerID) {
         var player = this.players[playerID];
-        if (typeof player === 'undefined') return;
+        if (typeof player === 'undefined') return false;
 
         var tail = player.tail;
 
@@ -263,7 +274,10 @@ class Snake {
         delete this.players[playerID];
 
         // Broadcast event
-        this._gameEventListener(this, 'player_delete', playerID);
+        if (typeof this._gameEventListener !== 'undefined')
+            this._gameEventListener(this, 'player_delete', playerID);
+
+        return true;
     }
 
     /**
