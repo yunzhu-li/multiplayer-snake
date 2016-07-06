@@ -218,7 +218,7 @@ class Snake {
      * Processes queued keystrokes
      */
     _processKeyStrokes() {
-        for (var i in this.keyStrokeQueue) {
+        for (var i = 0; i < this.keyStrokeQueue.length; i++) {
             var keystroke = this.keyStrokeQueue[i];
             var frame = keystroke.frame;
             var playerID = keystroke.playerID;
@@ -230,7 +230,7 @@ class Snake {
             if (frameDifference < 0) continue;
 
             // Remove keystroke from queue
-            delete this.keyStrokeQueue[i];
+            this.keyStrokeQueue.splice(i--, 1);
 
             // Send ACK
             this._gameEventListener(this, 'keystroke_ack', {playerID: playerID, frame: frame});

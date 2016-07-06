@@ -139,7 +139,7 @@ Snake.prototype._sendGameState = function() {
  * Processes queued keystrokes
  */
 Snake.prototype._processKeyStrokes = function() {
-    for (var i in this.keyStrokeQueue) {
+    for (var i = 0; i < this.keyStrokeQueue.length; i++) {
         var keystroke = this.keyStrokeQueue[i];
         var frame = keystroke.frame;
         var playerID = keystroke.playerID;
@@ -149,7 +149,7 @@ Snake.prototype._processKeyStrokes = function() {
         if (frame > this.currentFrame) continue;
 
         // Remove keystroke from queue
-        delete this.keyStrokeQueue[i];
+        this.keyStrokeQueue.splice(i--, 1);
 
         // Discard if its for a past frame
         if (frame < this.currentFrame) continue;
