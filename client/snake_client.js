@@ -59,7 +59,7 @@ SnakeClient.prototype.initSocket = function() {
     socket.emit('list_rooms');
 
     // Measure latency
-    setTimeout(this.measureLatency.bind(this), 0);
+    setTimeout(this.measureLatency.bind(this), 100);
   }.bind(this));
 
   // Disconnected
