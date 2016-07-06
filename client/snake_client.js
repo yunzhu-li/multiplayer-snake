@@ -179,8 +179,11 @@ SnakeClient.prototype.measureLatency = function() {
  */
 SnakeClient.prototype.startGame = function(roomID) {
   // Get player name
-  this.playerName = this.txt_player_name.val();
-  if (this.playerName.length <= 0) this.playerName = this.randomPlayerName();
+  if (typeof this.playerName === 'undefined')
+    this.playerName = this.txt_player_name.val();
+
+  if (this.playerName.length <= 0)
+    this.playerName = this.randomPlayerName();
 
   // Accept all updates at start
   this.pendingKeyStrokeFrame = 0;
