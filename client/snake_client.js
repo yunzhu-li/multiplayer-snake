@@ -21,10 +21,11 @@ function SnakeClient() {
   this.keyMap = {37: 0, 38: 1, 39: 2, 40: 3, 65: 0, 87: 1, 68: 2, 83: 3};
 
   this.currentFrame = 0;
-  this.frameAdvance = 0;
+  this.frameOffset = 0;
   this.pendingKeyStrokeFrame = 0;
   this.gameStarted = false;
   this.pingCount = 0;
+  this.averageRTT = 0;
 
   // Init game
   this.snake = new Snake(50);
@@ -60,7 +61,7 @@ function SnakeClient() {
 SnakeClient.prototype.initSocket = function() {
 
   var socket = io('http://127.0.0.1:3000');
-  // var socket = io('http://52.8.0.66:3000');
+  // var socket = io('http://52.52.19.25:3000');
 
   this.socket = socket;
   this.updateStatusPanel('#FF9800', 'Connecting');
@@ -73,7 +74,7 @@ SnakeClient.prototype.initSocket = function() {
     socket.emit('list_rooms');
 
     // Measure latency
-    setTimeout(this.measureLatency.bind(this), 0);
+    setTimeout(this.measureLatency.bind(this), 500);
   }.bind(this));
 
   // Disconnected
@@ -85,10 +86,10 @@ SnakeClient.prototype.initSocket = function() {
 
   // Receives ping_ack
   socket.on('_ping_ack', function() {
-    // Calculate rtt and frameAdvance
+    // Calculate rtt, averageRTT and frameOffset
     var rtt = Date.now() - this.pingTimestamp;
-    if (this.pingCount % 5 === 0)
-      this.frameAdvance = Math.floor(rtt / 2 / 100);
+    this.averageRTT = Math.floor(((this.averageRTT * this.pingCount) + rtt) / (this.pingCount + 1));
+    this.frameOffset = Math.floor(this.averageRTT / 2 / 100);
 
     // Display rtt
     if (this.gameStarted) {
@@ -101,7 +102,7 @@ SnakeClient.prototype.initSocket = function() {
     this.pingCount++;
 
     // Measure latency again in 5 seconds
-    setTimeout(this.measureLatency.bind(this), 5000);
+    setTimeout(this.measureLatency.bind(this), 3000);
   }.bind(this));
 
   // Receives room list
@@ -149,7 +150,7 @@ SnakeClient.prototype.initSocket = function() {
     if (this.pendingKeyStrokeFrame !== 0) return;
 
     // Update state to local game logic
-    this.snake.setGameState(true, data.frame, this.frameAdvance, data.players, data.board, data.directions);
+    this.snake.setGameState(true, data.frame, this.frameOffset, data.players, data.board, data.directions);
   }.bind(this));
 
   // Keystroke acknowledge
