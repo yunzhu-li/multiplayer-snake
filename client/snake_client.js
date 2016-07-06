@@ -60,8 +60,8 @@ function SnakeClient() {
  */
 SnakeClient.prototype.initSocket = function() {
 
-  var socket = io('http://127.0.0.1:3000');
-  // var socket = io('http://52.52.19.25:3000');
+  var socket = io('http://127.0.0.1:3000', {reconnectionAttempts: 3});
+  // var socket = io('http://52.8.0.66:3000', {reconnectionAttempts: 3});
 
   this.socket = socket;
   this.updateStatusPanel('#FF9800', 'Connecting');
@@ -82,6 +82,11 @@ SnakeClient.prototype.initSocket = function() {
     this.gameStarted = false;
     this.snake.setGameState(false);
     this.updateStatusPanel('#F44336', 'Disconnected');
+    location.reload();
+  }.bind(this));
+
+  socket.on('reconnect_failed', function() {
+      this.updateStatusPanel('#F44336', 'Connection failed');
   }.bind(this));
 
   // Receives ping_ack
