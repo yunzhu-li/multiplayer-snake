@@ -201,7 +201,9 @@ class Snake {
      * @param {Object} player - player
      * @param {Boolean} moveTail - moves tail by default
      */
-    _progressPlayer(player, moveTail = true) {
+    _progressPlayer(player, moveTail) {
+        if (typeof moveTail === 'undefined') moveTail = true;
+
         var head = player.head;
         var tail = player.tail;
 
@@ -285,7 +287,9 @@ class Snake {
      * @param {Array} position - current position, [r, c]
      * @param {Boolean} reverse - move in reverse direction
      */
-    _nextPosition(position, reverse=false) {
+    _nextPosition(position, reverse) {
+        if (typeof reverse === 'undefined') reverse = false;
+
         var r = position[0], c = position[1];
         var d = this.directions[r][c];
         var dr = 0, dc = -1;
