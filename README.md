@@ -9,9 +9,9 @@ A **live demo** is hosted on: [https://apps.yunzhu.li/snake](https://apps.yunzhu
 Branches
 -----
 
-`master` - For high-latency networks. Using `rollback & prediction` non-blocking synchronization strategy
+`master` - For low-latency networks (<100ms RTT). Simple and robust.
 
-`blocking_synchronized_version` - For low-latency networks (<100ms RTT). Simple and robust.
+`rollback_and_prediction` - For high-latency networks. Using `rollback & prediction` non-blocking synchronization.
 
 Build & Run Your Own Copy
 -----
