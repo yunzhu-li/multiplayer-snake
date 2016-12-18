@@ -33,7 +33,7 @@ docker-compose up -d
   - If you run this app on a remote server, find this line in `client/snake_client.js`:
 
   ```
-  var socket = io('http://127.0.0.1:8000', {reconnectionAttempts: 3});
+  var socket = io('http://127.0.0.1:8000', { path: '/socket.io', reconnectionAttempts: 3 });
   ```
 
   - Change the IP address (and port) accordingly.
