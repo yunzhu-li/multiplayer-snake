@@ -67,8 +67,8 @@ function SnakeClient() {
  */
 SnakeClient.prototype.initSocket = function() {
 
-  var socket = io('http://127.0.0.1:3000', {reconnectionAttempts: 3});
-  // var socket = io('http://52.52.19.25:3000', {reconnectionAttempts: 3});
+  // Default port 8000 as in containerized configuration
+  var socket = io('http://127.0.0.1:8000', {reconnectionAttempts: 3});
 
   this.socket = socket;
   this.updateStatusPanel('#FF9800', 'Connecting');
