@@ -24,16 +24,16 @@ It is very easy to run this containerized app.
 docker-compose up -d
 ```
 
-- Access `http://localhost:8000` in your browser. Others can access via `http://<your-ip>:8000`.
+- Access `http://localhost:8000` in your browser.
 
 - Play!
 
-- If you run it on remote server
+- If you run it on remote server or play with others:
 
-  - If you run this app on a remote server, find this line in `client/snake_client.js`:
+  - Find this line in `client/snake_client.js`:
 
   ```
   var socket = io('http://127.0.0.1:8000', { path: '/socket.io', reconnectionAttempts: 3 });
   ```
 
-  - Change the IP address (and port) accordingly.
+  - Change the IP address (port) accordingly.
