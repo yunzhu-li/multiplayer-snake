@@ -21,7 +21,7 @@ This application is available as a docker image.
 
 - Run:
   ```
-  docker run -d --rm -p 8000:8000 -e SERVER_URI='http://<server-ip>:8000' yunzhu/snake-multiplayer
+  docker run -d --rm -p 8000:8000 -e SERVER_URI="http://<server-ip>:8000" yunzhu/snake-multiplayer
   ```
 
 - Access `http://<server-ip>:8000` in your browser.
