@@ -84,7 +84,8 @@ SnakeClient.prototype.initSocket = function() {
 
   // Connect
   var server_uri = 'http://127.0.0.1:8000';
-  var socket = io(server_uri, { path: '/socket.io', reconnectionAttempts: 3 });
+  var socket_io_path = '/socket.io';
+  var socket = io(server_uri, { path: socket_io_path, reconnectionAttempts: 3 });
 
   this.socket = socket;
   this.updateStatusPanel('#FF9800', 'Connecting');

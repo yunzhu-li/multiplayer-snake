@@ -33,6 +33,9 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Install node packages
 RUN npm install /app/server/
 
+# Default socket.io path
+ENV SOCKET_IO_PATH /socket.io
+
 # Run start script
 CMD ["/app/start.sh"]
 
