@@ -27,11 +27,14 @@ FROM node:7-alpine
 RUN apk --no-cache add nginx
 
 # Copy application & configuration
-ADD . /app/
-ADD nginx.conf /etc/nginx/nginx.conf
+COPY . /app/
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Install node packages
 RUN npm install /app/server/
 
-# Run nginx (deamon) and node
-CMD ["sh", "-c", "nginx && node /app/server/"]
+# Run start script
+CMD ["/app/start.sh"]
+
+# Default port 8000
+EXPOSE 8000
