@@ -28,7 +28,7 @@ RUN apk --no-cache add nginx
 
 # Copy application & configuration
 COPY . /app/
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY docker-nginx.conf /etc/nginx/nginx.conf
 
 # Install node packages
 RUN npm install /app/server/
@@ -37,7 +37,7 @@ RUN npm install /app/server/
 ENV SOCKET_IO_PATH /socket.io
 
 # Run start script
-CMD ["/app/start.sh"]
+CMD ["/app/docker-start.sh"]
 
 # Default port 8000
 EXPOSE 8000
