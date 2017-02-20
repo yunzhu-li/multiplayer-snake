@@ -13,27 +13,15 @@ Branches
 
 `rollback_and_prediction` - For high-latency networks. Using `rollback & prediction` non-blocking synchronization.
 
-Build & Run Your Own Copy
+Run Your Own Copy
 -----
-It is very easy to run this containerized app.
+This application is available as a docker image.
 
-- Make sure you have `docker` and `docker-compose` installed on your local environment.
+- Make sure you have access to `docker`.
 
-- Clone this repo, in the repo root, run:
-```
-docker-compose up -d
-```
-
-- Access `http://localhost:8000` in your browser.
-
-- Play!
-
-- If you run it on remote server or play with others:
-
-  - Find this line in `client/snake_client.js`:
-
+- Run:
   ```
-  var socket = io('http://127.0.0.1:8000', { path: '/socket.io', reconnectionAttempts: 3 });
+  docker run -d --rm -p 8000:8000 -e SERVER_URI='http://<server-ip>:8000' yunzhu/snake-multiplayer
   ```
 
-  - Change the IP address (port) accordingly.
+- Access `http://<server-ip>:8000` in your browser.
