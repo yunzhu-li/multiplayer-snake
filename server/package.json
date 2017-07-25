@@ -1,14 +1,19 @@
 {
   "name": "snake-multiplayer",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A multiplayer snake game.",
   "dependencies": {
-    "socket.io": "^1.4.6"
+    "socket.io": "2.0.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:yunzhu-li/snake-multiplayer.git"
   },
   "scripts": {
     "start": "node ."
   },
   "jshintConfig": {
     "esversion": 6
-  }
+  },
+  "license": "GPL-3.0"
 }
