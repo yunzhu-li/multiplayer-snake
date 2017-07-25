@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-FROM node:7-alpine
+FROM node:8-alpine
 
 # Install nginx
 RUN apk --no-cache add nginx

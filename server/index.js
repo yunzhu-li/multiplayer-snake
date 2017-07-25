@@ -23,6 +23,15 @@
 // Get configuration
 var config = require('./config/config.js');
 
+// Handle signals
+process.on('SIGTERM', function() {
+    process.exit(0);
+});
+
+process.on('SIGINT', function() {
+    process.exit(0);
+});
+
 // Start socket API service
 var SocketAPI = require('./api/socket_api.js');
 socket_api = new SocketAPI();
