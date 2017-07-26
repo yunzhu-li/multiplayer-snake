@@ -25,3 +25,9 @@ This application is available as a docker image.
   ```
 
 - Access `http://<server-ip>:8000` in your browser.
+
+> The 2 environment variables `SERVER_URI` and `SOCKET_IO_PATH` (optional) are used to configure the socket.io connection info for the client page served by the container.
+>
+> The container always serves client page at `/` and socket.io connection at `/socket.io/`.
+>
+> See: https://socket.io/docs/client-api/#new-manager-url-options
