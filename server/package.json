@@ -15,5 +15,5 @@
   "jshintConfig": {
     "esversion": 6
   },
-  "license": "GPL-3.0"
+  "license": "MIT"
 }
