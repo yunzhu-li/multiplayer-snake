@@ -3,7 +3,7 @@
   "version": "0.0.3",
   "description": "A multiplayer snake game.",
   "dependencies": {
-    "socket.io": "^2.1.1"
+    "socket.io": "^2.4.0"
   },
   "repository": {
     "type": "git",
